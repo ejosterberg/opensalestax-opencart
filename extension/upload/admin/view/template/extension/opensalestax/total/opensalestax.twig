@@ -1,0 +1,105 @@
+{# SPDX-License-Identifier: Apache-2.0 #}
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-opensalestax" data-bs-toggle="tooltip" title="Save" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="Back" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="alert alert-warning">
+      <i class="fa-solid fa-triangle-exclamation"></i> {{ text_disclaimer }}
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        <form id="form-opensalestax" action="{{ save }}" method="post" data-oc-toggle="ajax">
+          <div class="row mb-3">
+            <label for="input-status" class="col-sm-3 col-form-label">{{ entry_status }}</label>
+            <div class="col-sm-9">
+              <select id="input-status" name="module_opensalestax_status" class="form-select">
+                <option value="1"{% if module_opensalestax_status %} selected{% endif %}>Enabled</option>
+                <option value="0"{% if not module_opensalestax_status %} selected{% endif %}>Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-base-url" class="col-sm-3 col-form-label">{{ entry_base_url }}</label>
+            <div class="col-sm-9">
+              <input type="url" id="input-base-url" name="module_opensalestax_base_url" value="{{ module_opensalestax_base_url }}" placeholder="https://ost.example.com" class="form-control">
+              <small class="form-text">{{ help_base_url }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-api-key" class="col-sm-3 col-form-label">{{ entry_api_key }}</label>
+            <div class="col-sm-9">
+              <input type="password" id="input-api-key" name="module_opensalestax_api_key" value="{{ module_opensalestax_api_key }}" autocomplete="new-password" class="form-control">
+              <small class="form-text">{{ help_api_key }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-timeout" class="col-sm-3 col-form-label">{{ entry_timeout_seconds }}</label>
+            <div class="col-sm-9">
+              <input type="number" id="input-timeout" min="1" max="60" step="1" name="module_opensalestax_timeout_seconds" value="{{ module_opensalestax_timeout_seconds }}" class="form-control">
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-tls-verify" class="col-sm-3 col-form-label">{{ entry_tls_verify }}</label>
+            <div class="col-sm-9">
+              <select id="input-tls-verify" name="module_opensalestax_tls_verify" class="form-select">
+                <option value="1"{% if module_opensalestax_tls_verify %} selected{% endif %}>Yes</option>
+                <option value="0"{% if not module_opensalestax_tls_verify %} selected{% endif %}>No</option>
+              </select>
+              <small class="form-text">{{ help_tls_verify }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-allow-private" class="col-sm-3 col-form-label">{{ entry_allow_private_nets }}</label>
+            <div class="col-sm-9">
+              <select id="input-allow-private" name="module_opensalestax_allow_private_nets" class="form-select">
+                <option value="1"{% if module_opensalestax_allow_private_nets %} selected{% endif %}>Yes</option>
+                <option value="0"{% if not module_opensalestax_allow_private_nets %} selected{% endif %}>No</option>
+              </select>
+              <small class="form-text">{{ help_allow_private_nets }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-fail-hard" class="col-sm-3 col-form-label">{{ entry_fail_hard }}</label>
+            <div class="col-sm-9">
+              <select id="input-fail-hard" name="module_opensalestax_fail_hard" class="form-select">
+                <option value="1"{% if module_opensalestax_fail_hard %} selected{% endif %}>Yes</option>
+                <option value="0"{% if not module_opensalestax_fail_hard %} selected{% endif %}>No</option>
+              </select>
+              <small class="form-text">{{ help_fail_hard }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-cache-ttl" class="col-sm-3 col-form-label">{{ entry_cache_ttl_seconds }}</label>
+            <div class="col-sm-9">
+              <input type="number" id="input-cache-ttl" min="0" step="1" name="module_opensalestax_cache_ttl_seconds" value="{{ module_opensalestax_cache_ttl_seconds }}" class="form-control">
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}

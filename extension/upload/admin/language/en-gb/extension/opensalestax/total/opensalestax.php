@@ -1,0 +1,34 @@
+<?php
+
+// SPDX-License-Identifier: Apache-2.0
+
+declare(strict_types=1);
+
+// Heading
+$_['heading_title']                   = 'OpenSalesTax';
+
+// Text
+$_['text_extension']                  = 'Extensions';
+$_['text_success']                    = 'Success: You have modified the OpenSalesTax settings.';
+$_['text_edit']                       = 'Edit OpenSalesTax';
+$_['text_disclaimer']                 = 'Tax calculations are provided as-is for convenience. The merchant is solely responsible for tax-collection accuracy and remittance to the appropriate jurisdictions. Verify against your state Department of Revenue before remitting.';
+
+// Entry
+$_['entry_status']                    = 'Enabled';
+$_['entry_base_url']                  = 'Engine base URL';
+$_['entry_api_key']                   = 'API key (optional)';
+$_['entry_timeout_seconds']           = 'HTTP timeout (seconds)';
+$_['entry_tls_verify']                = 'Verify TLS certificate';
+$_['entry_allow_private_nets']        = 'Allow private network engines (advanced)';
+$_['entry_fail_hard']                 = 'Block checkout on engine error';
+$_['entry_cache_ttl_seconds']         = 'Cache TTL (seconds)';
+
+// Help
+$_['help_base_url']                   = 'Base URL of your self-hosted OpenSalesTax engine, e.g. https://ost.example.com';
+$_['help_api_key']                    = 'Bearer token if your engine requires authentication. Leave blank for unauthenticated engines.';
+$_['help_tls_verify']                 = 'Strongly recommended ON. Disable only for engines with self-signed certificates.';
+$_['help_allow_private_nets']         = 'Permit RFC1918 / loopback / link-local hosts. Required if your engine runs on the same LAN as OpenCart.';
+$_['help_fail_hard']                  = 'When ON, an unreachable engine blocks checkout. When OFF (default), OpenCart\'s built-in tax handles the cart and a warning is logged.';
+
+// Error
+$_['error_permission']                = 'Warning: You do not have permission to modify OpenSalesTax!';

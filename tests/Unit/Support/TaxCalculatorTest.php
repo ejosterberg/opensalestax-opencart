@@ -1,0 +1,299 @@
+<?php
+
+// SPDX-License-Identifier: Apache-2.0
+
+declare(strict_types=1);
+
+namespace OpenSalesTax\OpenCart\Tests\Unit\Support;
+
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
+use OpenSalesTax\Client as SdkClient;
+use OpenSalesTax\OpenCart\Exceptions\OpenCartOpenSalesTaxException;
+use OpenSalesTax\OpenCart\Support\CartPayloadBuilder;
+use OpenSalesTax\OpenCart\Support\ConfigBag;
+use OpenSalesTax\OpenCart\Support\OpenSalesTaxClientFactory;
+use OpenSalesTax\OpenCart\Support\RateCache;
+use OpenSalesTax\OpenCart\Support\TaxCalculator;
+use OpenSalesTax\OpenCart\Support\UrlValidator;
+use OpenSalesTax\OpenCart\Tests\Stubs\ArrayCache;
+use OpenSalesTax\OpenCart\Tests\Stubs\ArrayLogger;
+use PHPUnit\Framework\TestCase;
+
+final class TaxCalculatorTest extends TestCase
+{
+    /** @var array<int, array<string, mixed>> */
+    private const PRODUCTS = [['total' => 100.00, 'quantity' => 1]];
+
+    /** @var array<string, mixed> */
+    private const SHIPPING_ADDRESS = ['iso_code_2' => 'US', 'postcode' => '55401'];
+
+    public function testInactiveConfigReturnsNullImmediately(): void
+    {
+        $logger = new ArrayLogger();
+        $calc = $this->buildCalculator(
+            config: ConfigBag::fromArray([]), // disabled by default
+            mockResponses: [],
+            logger: $logger,
+        );
+
+        self::assertNull($calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD'));
+        self::assertSame([], $logger->records);
+    }
+
+    public function testNonUsdReturnsNullWithoutCallingEngine(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(),
+            mock: $mock,
+            logger: $logger,
+        );
+
+        self::assertNull($calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'EUR'));
+        self::assertSame(0, $mock->count()); // no requests against the mock
+    }
+
+    public function testNonUsReturnsNullWithoutCallingEngine(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(),
+            mock: $mock,
+            logger: $logger,
+        );
+
+        self::assertNull($calc->calculate(
+            self::PRODUCTS,
+            ['iso_code_2' => 'GB', 'postcode' => 'SW1A 1AA'],
+            'USD',
+        ));
+        self::assertSame(0, $mock->count());
+    }
+
+    public function testHappyPathReturnsResponseAndCachesIt(): void
+    {
+        $logger = new ArrayLogger();
+        $store = new ArrayCache();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(),
+            mock: $mock,
+            logger: $logger,
+            cacheStore: $store,
+        );
+
+        $response = $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD');
+        self::assertNotNull($response);
+        self::assertSame('8.83', $response->taxTotal);
+        self::assertSame(1, $store->setCount);
+        self::assertSame(1, $logger->countAtLevel('info'));
+        self::assertArrayHasKey('ost:rate:55401', $store->store);
+    }
+
+    public function testSecondCallHitsCacheWithoutEngineRoundTrip(): void
+    {
+        $logger = new ArrayLogger();
+        $store = new ArrayCache();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+            // No second response queued — a second engine call would throw.
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(),
+            mock: $mock,
+            logger: $logger,
+            cacheStore: $store,
+        );
+
+        $first = $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD');
+        $second = $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD');
+
+        self::assertNotNull($first);
+        self::assertNotNull($second);
+        self::assertSame($first->taxTotal, $second->taxTotal);
+        self::assertSame(0, $mock->count()); // both responses consumed; not really useful
+        self::assertSame(1, $logger->countAtLevel('info')); // only one engine call
+    }
+
+    public function testEngineErrorWithFailSoftReturnsNullAndLogsWarning(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(500, ['Content-Type' => 'application/json'], '{"error":"oops"}'),
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(failHard: false),
+            mock: $mock,
+            logger: $logger,
+        );
+
+        self::assertNull($calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD'));
+        self::assertSame(1, $logger->countAtLevel('warning'));
+    }
+
+    public function testEngineErrorWithFailHardThrows(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(500, ['Content-Type' => 'application/json'], '{"error":"oops"}'),
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(failHard: true),
+            mock: $mock,
+            logger: $logger,
+        );
+
+        $this->expectException(OpenCartOpenSalesTaxException::class);
+        $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD');
+    }
+
+    public function testPrivateBaseUrlFailSoftReturnsNull(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([]);
+        $config = ConfigBag::fromArray([
+            'status'   => true,
+            'base_url' => 'http://10.0.0.1:8080',
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $config,
+            mock: $mock,
+            logger: $logger,
+            validator: new UrlValidator(false, static fn (string $h): array => [$h]),
+        );
+
+        self::assertNull($calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD'));
+        self::assertSame(0, $mock->count());
+    }
+
+    public function testEmptyCartReturnsNull(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(),
+            mock: $mock,
+            logger: $logger,
+        );
+
+        self::assertNull($calc->calculate([], self::SHIPPING_ADDRESS, 'USD'));
+        self::assertSame(0, $mock->count());
+    }
+
+    public function testEngineMalformedJsonFailsSoftByDefault(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], 'not json'),
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(),
+            mock: $mock,
+            logger: $logger,
+        );
+
+        self::assertNull($calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD'));
+        self::assertSame(1, $logger->countAtLevel('warning'));
+    }
+
+    private function activeConfig(bool $failHard = false): ConfigBag
+    {
+        return ConfigBag::fromArray([
+            'status'             => true,
+            'base_url'           => 'https://ost.example.com',
+            'fail_hard'          => $failHard,
+            'cache_ttl_seconds'  => 60,
+            'allow_private_nets' => true,  // for the test validator below
+        ]);
+    }
+
+    /**
+     * @param array<int, mixed> $mockResponses
+     */
+    private function buildCalculator(
+        ConfigBag $config,
+        array $mockResponses,
+        ArrayLogger $logger,
+    ): TaxCalculator {
+        $mock = new MockHandler($mockResponses);
+        return $this->buildCalculatorWithMock($config, $mock, $logger);
+    }
+
+    private function buildCalculatorWithMock(
+        ConfigBag $config,
+        MockHandler $mock,
+        ArrayLogger $logger,
+        ?ArrayCache $cacheStore = null,
+        ?UrlValidator $validator = null,
+    ): TaxCalculator {
+        $cacheStore ??= new ArrayCache();
+        $validator ??= new UrlValidator(
+            allowPrivateNets: false,
+            hostResolver: static fn (string $host): array => ['8.8.8.8'],
+        );
+
+        $handler = HandlerStack::create($mock);
+        $guzzle = new GuzzleClient(['handler' => $handler]);
+
+        $factory = new class ($logger, $validator, $guzzle) extends OpenSalesTaxClientFactory {
+            public function __construct(
+                ArrayLogger $log,
+                UrlValidator $validator,
+                private readonly GuzzleClient $guzzle,
+            ) {
+                parent::__construct($log, $validator);
+            }
+
+            public function make(ConfigBag $config): ?SdkClient
+            {
+                // Re-run the parent validate path for the URL check, but if it
+                // returned a Client, swap in our pre-mocked Guzzle handler.
+                $real = parent::make($config);
+                if ($real === null) {
+                    return null;
+                }
+                return new SdkClient(
+                    baseUrl: $config->baseUrl,
+                    apiKey: $config->apiKey !== '' ? $config->apiKey : null,
+                    httpClient: $this->guzzle,
+                );
+            }
+        };
+
+        return new TaxCalculator(
+            config: $config,
+            clientFactory: $factory,
+            payloadBuilder: new CartPayloadBuilder(),
+            cache: new RateCache($cacheStore, $config->cacheTtlSeconds),
+            logger: $logger,
+        );
+    }
+
+    private function engineOk(): string
+    {
+        return json_encode([
+            'subtotal'   => '100.00',
+            'tax_total'  => '8.83',
+            'lines'      => [
+                [
+                    'amount'        => '100.00',
+                    'category'      => 'general',
+                    'tax'           => '8.83',
+                    'rate_pct'      => '8.83',
+                    'jurisdictions' => [
+                        ['name' => 'Minnesota State', 'type' => 'state',  'rate_pct' => '6.875', 'tax' => '6.88'],
+                        ['name' => 'Hennepin County', 'type' => 'county', 'rate_pct' => '1.955', 'tax' => '1.95'],
+                    ],
+                ],
+            ],
+            'disclaimer' => 'calc-only',
+        ], JSON_THROW_ON_ERROR);
+    }
+}

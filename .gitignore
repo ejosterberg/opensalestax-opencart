@@ -1,0 +1,14 @@
+/vendor/
+/.phpunit.cache/
+/.phpunit.result.cache
+/dist/
+/build/
+/coverage/
+/.scannerwork/
+/coverage.xml
+/.php-cs-fixer.cache
+extension/upload/system/library/opensalestax/vendor/
+*.log
+.DS_Store
+.idea/
+.vscode/

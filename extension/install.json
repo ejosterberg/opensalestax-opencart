@@ -1,0 +1,9 @@
+{
+    "name": "OpenSalesTax for OpenCart",
+    "version": "0.1.0-alpha.1",
+    "author": "Eric Osterberg",
+    "link": "https://github.com/ejosterberg/opensalestax-opencart",
+    "code": "opensalestax",
+    "license": "Apache-2.0",
+    "description": "Destination-based US sales tax via a merchant-self-hosted OpenSalesTax engine. Calculation only; the merchant remits."
+}

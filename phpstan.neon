@@ -1,0 +1,8 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - extension/upload/system/library/opensalestax/vendor
+    reportUnmatchedIgnoredErrors: false
