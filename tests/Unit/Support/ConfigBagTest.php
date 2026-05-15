@@ -123,6 +123,18 @@ final class ConfigBagTest extends TestCase
         );
     }
 
+    public function testPerJurisdictionLinesDefaultsFalse(): void
+    {
+        self::assertFalse(ConfigBag::fromArray([])->perJurisdictionLines);
+    }
+
+    public function testPerJurisdictionLinesParsesBoolish(): void
+    {
+        self::assertTrue(ConfigBag::fromArray(['per_jurisdiction_lines' => '1'])->perJurisdictionLines);
+        self::assertTrue(ConfigBag::fromArray(['per_jurisdiction_lines' => 'YES'])->perJurisdictionLines);
+        self::assertFalse(ConfigBag::fromArray(['per_jurisdiction_lines' => '0'])->perJurisdictionLines);
+    }
+
     public function testFullPopulatedShape(): void
     {
         $bag = ConfigBag::fromArray([

@@ -118,6 +118,42 @@ final class OpenSalesTaxClientFactoryTest extends TestCase
         self::assertNotNull($factory->make($bag));
     }
 
+    public function testResolveDirectiveDefaultsHttpsPort443(): void
+    {
+        self::assertSame(
+            'ost.example.com:443:203.0.113.42',
+            OpenSalesTaxClientFactory::buildResolveDirective(
+                'https://ost.example.com',
+                'ost.example.com',
+                '203.0.113.42',
+            ),
+        );
+    }
+
+    public function testResolveDirectiveDefaultsHttpPort80(): void
+    {
+        self::assertSame(
+            'ost.example.com:80:203.0.113.42',
+            OpenSalesTaxClientFactory::buildResolveDirective(
+                'http://ost.example.com',
+                'ost.example.com',
+                '203.0.113.42',
+            ),
+        );
+    }
+
+    public function testResolveDirectiveExplicitPortWins(): void
+    {
+        self::assertSame(
+            'lan-engine.local:8080:10.0.0.5',
+            OpenSalesTaxClientFactory::buildResolveDirective(
+                'http://lan-engine.local:8080',
+                'lan-engine.local',
+                '10.0.0.5',
+            ),
+        );
+    }
+
     public function testRejectedUrlIsCaughtAndWrappedAsWarning(): void
     {
         // Force rejection via a resolver returning a private IP — exercises the

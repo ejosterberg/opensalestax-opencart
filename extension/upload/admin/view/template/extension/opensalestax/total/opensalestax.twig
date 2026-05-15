@@ -107,6 +107,17 @@
           </div>
 
           <div class="row mb-3">
+            <label for="input-per-jurisdiction" class="col-sm-3 col-form-label">{{ entry_per_jurisdiction_lines }}</label>
+            <div class="col-sm-9">
+              <select id="input-per-jurisdiction" name="module_opensalestax_per_jurisdiction_lines" class="form-select">
+                <option value="1"{% if module_opensalestax_per_jurisdiction_lines %} selected{% endif %}>Yes</option>
+                <option value="0"{% if not module_opensalestax_per_jurisdiction_lines %} selected{% endif %}>No</option>
+              </select>
+              <small class="form-text">{{ help_per_jurisdiction_lines }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
             <div class="col-sm-3"></div>
             <div class="col-sm-9">
               <button type="button" id="button-opensalestax-test" class="btn btn-secondary"><i class="fa-solid fa-plug"></i> {{ button_test_connection }}</button>

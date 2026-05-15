@@ -196,4 +196,48 @@ final class UrlValidatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $validator->validate('http://10.20.30.40:8080');
     }
+
+    public function testValidateAndResolveReturnsHostnameAndIpForHostname(): void
+    {
+        $validator = new UrlValidator(
+            allowPrivateNets: false,
+            hostResolver: static fn (string $host): array => ['203.0.113.42'],
+        );
+
+        [$host, $ip] = $validator->validateAndResolve('https://ost.example.com');
+        self::assertSame('ost.example.com', $host);
+        self::assertSame('203.0.113.42', $ip);
+    }
+
+    public function testValidateAndResolveReturnsFirstPublicIpFromList(): void
+    {
+        $validator = new UrlValidator(
+            allowPrivateNets: false,
+            hostResolver: static fn (string $host): array => ['198.51.100.7', '203.0.113.42'],
+        );
+
+        [, $ip] = $validator->validateAndResolve('https://ost.example.com');
+        self::assertSame('198.51.100.7', $ip);
+    }
+
+    public function testValidateAndResolveOnLiteralIpReturnsIpItself(): void
+    {
+        // Default resolver short-circuits literal IPs to [$host], so we keep
+        // the input IP as the pinned value.
+        $validator = new UrlValidator(allowPrivateNets: false);
+        [, $ip] = $validator->validateAndResolve('https://203.0.113.42');
+        self::assertSame('203.0.113.42', $ip);
+    }
+
+    public function testValidateAndResolveOnPrivateNetsReturnsResolvedIp(): void
+    {
+        $validator = new UrlValidator(
+            allowPrivateNets: true,
+            hostResolver: static fn (string $host): array => ['10.0.0.5'],
+        );
+
+        [$host, $ip] = $validator->validateAndResolve('http://lan-engine.local:8080');
+        self::assertSame('lan-engine.local', $host);
+        self::assertSame('10.0.0.5', $ip);
+    }
 }

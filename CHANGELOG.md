@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Pre-release identifiers (`-alpha.N`, `-rc.N`) signal that the listed version is not yet stable.
 
+## [0.2.0] - 2026-05-14
+
+### Added
+
+- **Per-jurisdiction tax-line surface (opt-in).** New admin toggle "Show tax breakdown per jurisdiction"; when on, the cart shows one OpenCart total line per jurisdiction (state / county / city / special) — each labeled, distinct `code` (`opensalestax_state` / `_county` / `_city` / `_special`), sort_order = base + offset (state +0 ... special +3). Rounding drift between per-jurisdiction sums and the engine's authoritative `tax_total` is absorbed into the last summary so the cart total ties exactly to the engine's number. Default off — v0.1.1 single-line behavior is preserved.
+- **DNS-rebinding defense via cURL IP-pinning.** `UrlValidator::validateAndResolve()` captures the resolved IP at save/validation time; `OpenSalesTaxClientFactory` plumbs that IP into Guzzle's `curl.options[CURLOPT_RESOLVE]` so the runtime cURL connection opens the TCP socket to the pinned IP regardless of what DNS returns at request time. TLS SNI + cert validation continue to use the hostname; only the underlying resolution is pinned. Closes the v0.1 `docs/SECURITY-REVIEW.md` finding "DNS rebinding (deferred to v0.2)".
+- New `src/Support/JurisdictionSummary` value object grouping `CalculatedLine.jurisdictions[]` across cart lines, with rounding-drift absorption.
+- 15 additional PHPUnit cases covering the per-jurisdiction grouping + sort logic, the IP-pinning directive shape, and the new `validateAndResolve()` path (106 tests / 227 assertions total).
+
+### Changed
+
+- `UrlValidator::validate(string $url): void` is now a backwards-compatible wrapper around the new `validateAndResolve(string $url): array{0:string,1:string}`. Save-time admin validation behavior is unchanged.
+- `OpenSalesTaxClientFactory::make()` builds Guzzle with cURL options when the cURL extension is available; falls back to an un-pinned client with a logged warning when cURL is unavailable. Pinning is defense-in-depth on top of the save-time SSRF check.
+- `TaxCalculator` exposes `getConfig()` so the catalog order-total glue can read the per-jurisdiction setting without re-reading `oc_setting`.
+
+### Security
+
+- DNS-rebinding finding moves from "Open / acceptable for v0.1" to **Mitigated**. See `docs/SECURITY-REVIEW.md`.
+
+### Notes
+
+- Per-jurisdiction surface is opt-in (default off). Merchants who upgrade without changing the toggle see identical behavior to v0.1.1.
+- IP-pinning is always-on. Merchants whose DNS isn't compromised see no behavioral change; the cURL handle just opens to the pre-resolved IP instead of re-resolving.
+
 ## [0.1.1] - 2026-05-14
 
 ### Added
@@ -53,5 +77,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Customer-group exemptions.
 - Shipping-tax integration.
 
+[0.2.0]: https://github.com/ejosterberg/opensalestax-opencart/releases/tag/v0.2.0
 [0.1.1]: https://github.com/ejosterberg/opensalestax-opencart/releases/tag/v0.1.1
 [0.1.0-alpha.1]: https://github.com/ejosterberg/opensalestax-opencart/releases/tag/v0.1.0-alpha.1

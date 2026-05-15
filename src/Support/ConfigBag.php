@@ -24,6 +24,10 @@ final readonly class ConfigBag
      *     should bypass real-time tax calculation (OpenCart's built-in tax
      *     flow handles them instead — typically used for B2B / wholesale /
      *     nonprofit groups already configured under OpenCart's tax classes).
+     * @param bool  $perJurisdictionLines  When true, the catalog order-total
+     *     model emits one totals row per jurisdiction (state / county / city
+     *     / special) instead of one aggregate "Sales Tax" line. Default off
+     *     so v0.1 installs see no change after upgrade.
      */
     public function __construct(
         public bool $enabled,
@@ -35,6 +39,7 @@ final readonly class ConfigBag
         public bool $failHard,
         public int $cacheTtlSeconds,
         public array $exemptCustomerGroupIds = [],
+        public bool $perJurisdictionLines = false,
     ) {
     }
 
@@ -58,6 +63,7 @@ final readonly class ConfigBag
             failHard: self::boolish($settings, 'fail_hard', false),
             cacheTtlSeconds: self::intish($settings, 'cache_ttl_seconds', 86400),
             exemptCustomerGroupIds: self::intList($settings, 'exempt_customer_group_ids'),
+            perJurisdictionLines: self::boolish($settings, 'per_jurisdiction_lines', false),
         );
     }
 

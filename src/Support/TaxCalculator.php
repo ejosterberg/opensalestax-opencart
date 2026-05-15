@@ -39,6 +39,16 @@ final class TaxCalculator
     }
 
     /**
+     * Read-only accessor for the underlying ConfigBag. Lets the OpenCart
+     * order-total glue branch on settings (e.g. per-jurisdiction surface)
+     * without re-reading `oc_setting` rows.
+     */
+    public function getConfig(): ConfigBag
+    {
+        return $this->config;
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $products       OpenCart cart product array
      * @param array<string, mixed>             $shippingAddress OpenCart shipping_address shape
      * @param string                            $currency        Cart currency code

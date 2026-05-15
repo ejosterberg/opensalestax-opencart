@@ -1,6 +1,6 @@
 # OpenSalesTax for OpenCart
 
-> **v0.1.1** — installable; 91 unit tests + SonarQube green; cart-signature cache key, customer-group exemptions, and an admin "Test Connection" button. Not yet end-to-end validated on a live OpenCart storefront. See [`specs/`](specs/) for the build plan and roadmap.
+> **v0.2.0** — installable; 106 unit tests + SonarQube green; per-jurisdiction tax-line surface (opt-in) and cURL IP-pinning against DNS rebinding. Cart-signature cache key, customer-group exemptions, and an admin "Test Connection" button (all shipped in v0.1.1) remain. Not yet end-to-end validated on a live OpenCart storefront. See [`specs/`](specs/) for the build plan and roadmap.
 
 > **Tax calculations are provided as-is for convenience.** The merchant is solely responsible for tax-collection accuracy and remittance to the appropriate jurisdictions. **Verify against your state Department of Revenue before remitting.**
 
@@ -69,6 +69,7 @@ tools/build-ocmod.sh
 | Block checkout on engine error | No | When ON, an unreachable engine throws an error. When OFF (default), OpenCart's built-in tax handles the cart. |
 | Cache TTL (seconds) | 86400 | Per-ZIP cache lifetime. The cache key also includes a stable signature of the cart's `(category, amount)` tuples, so mixed-category carts at the same ZIP don't share cached results. |
 | Exempt customer groups | (empty) | Comma-separated OpenCart customer-group IDs (e.g. `2,3`) that bypass real-time tax calculation. Typical use: B2B / wholesale / nonprofit groups already mapped to OpenCart's tax classes. Leave blank for no exemptions. |
+| Show tax breakdown per jurisdiction | No | When ON, the cart shows a separate total line per jurisdiction (state / county / city / special) labeled like "Minnesota State Tax", "Hennepin County Tax". When OFF (default), a single aggregate "Sales Tax" line. |
 
 Click **Test Connection** at the bottom of the settings form to verify your engine URL / API key / TLS settings without putting a cart together. The button calls your engine's `/v1/health` and reports `ok / engine version` (or the failure reason). The button is ACL-gated to the same `modify` permission as the save action.
 
@@ -110,10 +111,11 @@ The threat model and current findings are in [`docs/SECURITY-REVIEW.md`](docs/SE
 ## Roadmap
 
 - **v0.1.x** — Live integration test on a real OpenCart 4.x storefront; OpenCart Marketplace submission.
-- **v0.2** — OpenCart 3.x backport (OCMOD path); per-jurisdiction tax-line surfacing; DNS-rebinding IP-pinning à la the Magento connector.
-- **v0.3** — Shipping-tax integration; multi-store support.
+- **v0.3** — OpenCart 3.x backport (OCMOD path); shipping-tax integration; multi-store support.
 
-Shipped earlier than originally planned: cart-signature cache key, customer-group exemptions, and the admin "Test Connection" button — all landed in **v0.1.1**.
+Shipped:
+- **v0.1.1** — cart-signature cache key, customer-group exemptions, admin "Test Connection" button.
+- **v0.2.0** — per-jurisdiction tax-line surface (opt-in), cURL IP-pinning against DNS rebinding.
 
 ## Related projects
 

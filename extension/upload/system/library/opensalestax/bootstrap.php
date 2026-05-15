@@ -105,6 +105,7 @@ final class OpensalestaxBootstrap
             'fail_hard',
             'cache_ttl_seconds',
             'exempt_customer_group_ids',
+            'per_jurisdiction_lines',
         ];
         $out = [];
         foreach ($keys as $key) {

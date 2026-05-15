@@ -4,48 +4,36 @@
 
 ## Pick up here
 
-**Phase 03 (v0.2 — surface + security)** is the next slice. Spec lives at `specs/phase-03-v0.2-surface-security/`. Two bundled improvements:
+**Check in with Eric first.** Phases 02 + 03 shipped in one session and the next phases are bigger commitments:
 
-1. **Per-jurisdiction tax-line surface** — instead of one "Sales Tax" total line, emit one OpenCart total line per resolved jurisdiction (state / county / city / special-district). Reuses `CalculatedLine.jurisdictions` from the SDK; touches the catalog model's `applyResponse()` and adds language strings. Optional admin toggle (default off) to preserve v0.1.1 behavior for merchants who like the single-line view.
-2. **DNS-rebinding IP-pinning** — when the URL validator accepts a hostname, capture the resolved IP and pin the engine's HTTP client to that IP for the lifetime of the request. Closes the "validator validates at save time only" finding from `docs/SECURITY-REVIEW.md`.
+- **Phase 04 (OC 3.x backport)** — entirely separate extension model (OCMOD/vqmod). Effectively a parallel codebase living in `extension-oc3/` with its own build script and a shared `src/Support/` library. Multi-day work.
+- **Phase 05 (Shipping-tax integration)** — needs engine-side support for shipping cost as a line item (verify SDK + engine support first; may block on upstream).
+- **Phase 06 (Multi-store)** — per-store settings keys in `oc_setting`. OpenCart 4.x has the `store_id` column; we'd add a setting-key prefix per store and a store-picker in the admin UI.
+- **Phase 07 (Marketplace submission)** — paperwork + screenshots + the OpenCart Marketplace form. Not code.
+- **Live-storefront integration test** — orthogonal. Can land alongside any phase. Needs a real OpenCart 4.x install + a reachable OST engine.
 
-## Ship checklist for Phase 03
+**Recommend:** ask Eric which of those is highest priority, OR shift to the live-storefront integration test to validate v0.2.0 against a real OpenCart install before any more code lands.
 
-- [ ] `specs/phase-03-v0.2-surface-security/spec.md` + `plan.md` + `tasks.md`
-- [ ] All features implemented under `src/Support/`
-- [ ] Test count delta: target +10 to +15 (per-jurisdiction grouping ~6, IP-pinning ~5)
-- [ ] PHPStan max clean
-- [ ] PHP-CS-Fixer clean
-- [ ] composer audit clean
-- [ ] `docs/SECURITY-REVIEW.md` updated: DNS-rebinding moves from "Open" to "Mitigated"
-- [ ] CHANGELOG `[0.2.0]` section; README v0.2 Roadmap line tracked off
-- [ ] Tag v0.2.0; release notes; .ocmod.zip artifact uploaded
+## What v0.2.0 shipped (recap)
 
-## Deferred (do NOT pull into Phase 03)
+See `specs/phase-03-v0.2-surface-security/` for the full record.
 
-- **OC 3.x backport** — Phase 04. Different extension model entirely (OCMOD/vqmod).
-- **Shipping-tax integration** — Phase 05. Needs engine-side support for shipping cost as a line item.
-- **Multi-store** — Phase 06. Per-store settings rows in `oc_setting`.
-- **OpenCart Marketplace submission** — Phase 07. Paperwork + UX polish, not code.
-- **Live-storefront integration test** — orthogonal; can land alongside any phase but isn't gated on any.
+- Per-jurisdiction tax-line surface — opt-in via the new admin toggle.
+- `JurisdictionSummary` value object grouping the engine's per-line jurisdiction breakdown across cart lines, with rounding-drift absorption.
+- DNS-rebinding defense — `UrlValidator::validateAndResolve()` captures the resolved IP at validation; `OpenSalesTaxClientFactory` pins it through Guzzle's `curl.options[CURLOPT_RESOLVE]`.
+- 15 new PHPUnit cases; total 106 / 227 assertions.
+- SECURITY-REVIEW.md: DNS-rebinding finding moves Open → Mitigated.
 
-## Risks / things to watch (Phase 03)
+## Still in-flight
 
-- **Tax-line ordering**: OpenCart sorts totals by `sort_order`. Per-jurisdiction lines need distinct sort_orders or they'll render in arbitrary order. Use base + offset (e.g. base 5, +0/+1/+2 for state/county/city).
-- **Tax-line code uniqueness**: OpenCart's order-totals are keyed by `code` in the totals array. Distinct jurisdictions need distinct codes (`opensalestax_state`, `opensalestax_county`, etc.) OR a single code with a structured title.
-- **IP-pinning + TLS SNI**: pinning to an IP while keeping the URL's hostname for the TLS handshake is the correct shape. Guzzle's `curl.options.CURLOPT_RESOLVE` is the canonical mechanism. Don't strip the hostname from the URL — that breaks SNI + the engine's cert validation.
-- **IP-pinning + private nets**: when `allow_private_nets` is on, IP-pinning should still apply (pin to the resolved private IP). The point is rebinding defense, not network policy.
+Nothing in code — Phase 03 is complete. The remote isn't pushed (Eric explicitly asked Claude to not push without authorization); tags `v0.1.1` and `v0.2.0` exist locally on the worktree branch.
 
-## What v0.1.1 shipped
+## Risks / things to watch (next phase, whichever it is)
 
-Just for context — see `specs/phase-02-v0.1.1-polish/` for the full record.
-
-- Cart-signature cache key (`CartPayloadBuilder::signatureFor()`, `RateCache::keyFor($zip, $sig)`)
-- Customer-group exemptions (`ConfigBag::$exemptCustomerGroupIds`, `TaxCalculator::calculate(..., $customerGroupId)`)
-- Admin "Test Connection" button (controller `testConnection()` action + Twig button + fetch handler)
-- 17 new PHPUnit cases; total 91 / 193 assertions
-- PHPStan max + CS-Fixer + composer audit clean
+- **OC 3.x backport**: don't try to share controllers — OC 3.x uses `controller/extension/total/opensalestax.php` (no nesting); OC 4.x uses `controller/extension/opensalestax/total/opensalestax.php`. Settings storage shape is the same; bootstrap shape differs.
+- **Multi-store**: `oc_setting` has a `store_id` column already, but the admin form's `editSetting()` writes scoped by store. The connector's runtime read needs to respect the active store, not the default store.
+- **Shipping-tax**: the engine's `/v1/calculate` accepts shipping as a line item (`category: shipping`), but verify the SDK exposes it cleanly. If the SDK lacks a shipping affordance, file upstream first.
 
 ## Last verified
 
-- 2026-05-14 — Phase 02 shipped as v0.1.1. PHPUnit / PHPStan / CS-Fixer / composer audit all green. SonarQube re-scan pending (no expected regressions; new hashing is `sha256`, new parser is plain string ops).
+- 2026-05-14 — Phase 03 shipped as v0.2.0 locally. PHPUnit 106/227, PHPStan max, PHP-CS-Fixer, composer audit all green. Tags `v0.1.1` and `v0.2.0` exist locally on branch `claude/serene-blackwell-65567f`. Not pushed to remote.

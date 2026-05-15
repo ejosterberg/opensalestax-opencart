@@ -70,6 +70,7 @@ class Opensalestax extends \Opencart\System\Engine\Controller
             self::SETTINGS_NS . '_fail_hard'                  => false,
             self::SETTINGS_NS . '_cache_ttl_seconds'          => 86400,
             self::SETTINGS_NS . '_exempt_customer_group_ids'  => '',
+            self::SETTINGS_NS . '_per_jurisdiction_lines'     => false,
         ];
         foreach ($keys as $key => $default) {
             $data[$key] = $this->config->get($key) ?? $default;

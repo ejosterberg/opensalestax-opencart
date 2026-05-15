@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Opencart\Catalog\Model\Extension\Opensalestax\Total;
 
 use OpenSalesTax\OpenCart\Exceptions\OpenCartOpenSalesTaxException;
+use OpenSalesTax\OpenCart\Support\JurisdictionSummary;
 use OpenSalesTax\OpenCart\Support\TaxCalculator;
 use OpenSalesTax\Responses\CalculateResponse;
 
@@ -29,6 +30,30 @@ class Opensalestax extends \Opencart\System\Engine\Model
     private const TAX_LINE_TITLE = 'Sales Tax';
 
     /**
+     * Language keys for per-jurisdiction line titles. Falls back to the
+     * engine-provided jurisdiction name when a key is missing — keeps unusual
+     * jurisdictions (the engine may add new types) renderable.
+     */
+    private const PER_JURISDICTION_TITLE_KEY = [
+        'state'   => 'title_state_tax',
+        'county'  => 'title_county_tax',
+        'city'    => 'title_city_tax',
+        'special' => 'title_special_tax',
+    ];
+
+    /**
+     * Code suffix per jurisdiction type. Combined with `opensalestax_` to form
+     * unique OpenCart total-line codes — required because the totals array is
+     * keyed by `code` in checkout.
+     */
+    private const PER_JURISDICTION_CODE = [
+        'state'   => 'opensalestax_state',
+        'county'  => 'opensalestax_county',
+        'city'    => 'opensalestax_city',
+        'special' => 'opensalestax_special',
+    ];
+
+    /**
      * @param array<int, array<string, mixed>> $totals  Running totals list
      *                                                  (modified in place by reference).
      * @param array<string, float|int>         $taxes   Per-tax-class running totals.
@@ -41,29 +66,29 @@ class Opensalestax extends \Opencart\System\Engine\Model
             return;
         }
 
-        $response = $this->computeResponse();
+        $calculator = $this->buildCalculatorSafely();
+        if (!$calculator instanceof TaxCalculator) {
+            return;
+        }
+
+        $response = $this->computeResponse($calculator);
         if ($response === null) {
             return;
         }
-        $this->applyResponse($response, $totals, $total);
+        $this->applyResponse($calculator, $response, $totals, $total);
     }
 
     /**
-     * Build the calculator pipeline and ask it for a response. Returns null
-     * on any "yield to OpenCart" outcome (fail-soft default), and rethrows
+     * Ask the calculator for a response. Returns null on any "yield to
+     * OpenCart" outcome (fail-soft default), and rethrows
      * `OpenCartOpenSalesTaxException` only when the caller has opted into
      * fail-hard mode.
      *
      * @throws OpenCartOpenSalesTaxException When the calculator is in
      *     fail-hard mode and the engine is unreachable.
      */
-    private function computeResponse(): ?CalculateResponse
+    private function computeResponse(TaxCalculator $calculator): ?CalculateResponse
     {
-        $calculator = $this->buildCalculatorSafely();
-        if (!$calculator instanceof TaxCalculator) {
-            return null;
-        }
-
         $products      = $this->cart->getProducts();
         $shipping      = $this->extractShippingAddress();
         $currency      = $this->extractCurrencyCode();
@@ -135,14 +160,32 @@ class Opensalestax extends \Opencart\System\Engine\Model
      * @param array<int, array<string, mixed>> $totals
      * @param array<string, mixed>             $total
      */
-    private function applyResponse(CalculateResponse $response, array &$totals, array &$total): void
-    {
+    private function applyResponse(
+        TaxCalculator $calculator,
+        CalculateResponse $response,
+        array &$totals,
+        array &$total,
+    ): void {
         $taxAmount = (float) $response->taxTotal;
         if ($taxAmount <= 0.0) {
             return;
         }
 
         $sortOrder = (int) ($this->config->get(self::SORT_ORDER_KEY) ?: self::DEFAULT_SORT_ORDER);
+        $bag       = $calculator->getConfig();
+
+        if ($bag->perJurisdictionLines) {
+            $summaries = JurisdictionSummary::fromResponse($response);
+            if ($summaries !== []) {
+                foreach ($summaries as $summary) {
+                    $totals[] = $this->jurisdictionTotalRow($summary, $sortOrder);
+                }
+                $total['total'] = (float) ($total['total'] ?? 0.0) + $taxAmount;
+                return;
+            }
+            // Fall through to the aggregate line when the engine returned
+            // no surfaceable per-jurisdiction tax (e.g. note-only lines).
+        }
 
         $totals[] = [
             'extension'  => 'opensalestax',
@@ -153,10 +196,50 @@ class Opensalestax extends \Opencart\System\Engine\Model
         ];
 
         // Increment the platform's running total. We deliberately do NOT
-        // populate a tax_class_id key in `$taxes` for v0.1 because doing so
-        // would conflict with merchant-defined tax classes; we surface our
-        // computed tax as its own first-class total line instead.
+        // populate a tax_class_id key in `$taxes` because doing so would
+        // conflict with merchant-defined tax classes; we surface our
+        // computed tax as its own first-class total line(s) instead.
         $total['total'] = (float) ($total['total'] ?? 0.0) + $taxAmount;
+    }
+
+    /**
+     * Build a single OpenCart totals-array row for one jurisdiction.
+     *
+     * @return array<string, mixed>
+     */
+    private function jurisdictionTotalRow(JurisdictionSummary $summary, int $baseSortOrder): array
+    {
+        $code   = self::PER_JURISDICTION_CODE[$summary->type] ?? ('opensalestax_' . $summary->type);
+        $titleKey = self::PER_JURISDICTION_TITLE_KEY[$summary->type] ?? null;
+        $rendered = $titleKey !== null ? $this->renderTitle($titleKey, $summary->name) : $summary->name;
+        $offset = JurisdictionSummary::SORT_OFFSET[$summary->type] ?? 9;
+
+        return [
+            'extension'  => 'opensalestax',
+            'code'       => $code,
+            'title'      => $rendered,
+            'value'      => $summary->taxAmount,
+            'sort_order' => $baseSortOrder + $offset,
+        ];
+    }
+
+    /**
+     * Render a per-jurisdiction title using the language file's pattern, or
+     * fall back to the jurisdiction's literal name if the language layer
+     * isn't initialized in this request (e.g. headless/CLI testing).
+     */
+    private function renderTitle(string $titleKey, string $jurisdictionName): string
+    {
+        try {
+            $this->load->language('extension/opensalestax/total/opensalestax');
+            $pattern = (string) $this->language->get($titleKey);
+            if ($pattern !== '' && $pattern !== $titleKey) {
+                return sprintf($pattern, $jurisdictionName);
+            }
+        } catch (\Throwable) {
+            // ignore — fall back to the jurisdiction name
+        }
+        return $jurisdictionName;
     }
 
     /**

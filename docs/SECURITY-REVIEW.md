@@ -1,6 +1,6 @@
-# Security Review — opensalestax-opencart v0.1.0-alpha.1
+# Security Review — opensalestax-opencart v0.2.0
 
-**Reviewer:** automated audit + manual code review (2026-05-13).
+**Reviewer:** automated audit + manual code review (2026-05-13, refreshed 2026-05-14 after Phase 02 + Phase 03 ship).
 **Scope:** all PHP source files in `src/` plus the extension glue under `extension/upload/`. SDK code (`vendor/ejosterberg/opensalestax`) is reviewed in its own repo and assumed in-scope only for known-CVE checks here.
 **Methodology:** OWASP Top 10 mapped to OpenCart-extension-specific concerns; manual line-by-line review against a CWE-driven checklist; `composer audit` against current advisories.
 
@@ -11,8 +11,9 @@
 | Critical | 0 | — |
 | High | 0 | — |
 | Medium | 0 | — |
-| Low / Informational | 5 | All documented; no open action items |
-| Defense-in-depth | 2 | Built in from v0.1 |
+| Low / Informational | 4 | All documented; no open action items |
+| Mitigated since first review | 1 | DNS rebinding — closed in v0.2.0 via cURL IP-pinning |
+| Defense-in-depth | 3 | TLS-verify-on-default, SSRF default-deny on private nets, and cURL IP-pinning |
 
 **No critical, high, or medium-severity open findings.** The extension's threat model is bounded by the admin-settings-write boundary — an attacker with OpenCart admin write access has already won; the SSRF defense raises the bar against partial compromises (admin-panel-only writes, or future settings-import features).
 
@@ -64,18 +65,16 @@ On engine errors the connector writes the exception class and message into OpenC
 
 **Residual risk:** Acceptable for v0.1. Verbose internal-only logs help debug deployment issues.
 
-### LOW — DNS rebinding (deferred to v0.2)
+### MITIGATED in v0.2.0 — DNS rebinding (previously LOW)
 
-**File:** `src/Support/UrlValidator.php`
-**CWE:** CWE-918 (SSRF, mitigation gap)
+**Files:** `src/Support/UrlValidator.php`, `src/Support/OpenSalesTaxClientFactory.php`
+**CWE:** CWE-918 (SSRF)
 
-The `UrlValidator` resolves the engine host once at save time. A host that resolves to a public IP at validation time but to an internal IP at request time can bypass the SSRF check.
+**v0.1 gap:** The `UrlValidator` resolved the engine host once at save time. A host that resolved to a public IP at validation and to an internal IP at request time could bypass the SSRF check.
 
-**Mitigation gap:** The full mitigation would pin the resolved IP at save time and pass it via Guzzle's `CURLOPT_RESOLVE` so the runtime cURL connection bypasses DNS. The Magento connector does this; this extension defers to v0.2.
+**Mitigation in v0.2.0:** `UrlValidator::validateAndResolve()` captures the first public resolved IP at validation time (or the literal IP for IP-URLs; or the first private IP when "Allow private network engines" is on). `OpenSalesTaxClientFactory` plumbs that IP into Guzzle's `curl.options[CURLOPT_RESOLVE]` so the runtime cURL connection opens the TCP socket to the pinned IP, regardless of what DNS resolves the hostname to at request time. TLS SNI + cert validation continue to use the hostname; only the underlying resolution is pinned.
 
-**Why acceptable for v0.1:** The engine base URL is admin-controlled, not customer-controlled. An attacker who can edit OpenCart settings can already do worse than SSRF.
-
-**Action item for v0.2:** Add IP-pinning à la `opensalestax-magento`'s `ApiUrlValidator::validate()` returning the resolved IP, and inject `CURLOPT_RESOLVE` per request via Guzzle handler middleware.
+**Fallback:** When the cURL extension is unavailable (PHP built with `--disable-curl`), pinning is skipped and a warning is logged. The save-time SSRF check still runs; pinning is defense-in-depth on top of it.
 
 ### LOW — Admin form validates URL server-side but template is rendered raw
 
@@ -107,6 +106,13 @@ Guzzle's `verify` option is `true` by default in this extension. Opt-out via the
 
 The base URL validator rejects RFC1918 / loopback / link-local / CGNAT / multicast hosts by default. Merchants who legitimately self-host on the same LAN as OpenCart opt in via the admin "Allow private network engines" toggle — and that toggle is documented as "advanced" with a help-text explaining the trade-off.
 
+### cURL IP-pinning against DNS rebinding (added v0.2.0)
+
+**Files:** `src/Support/UrlValidator.php`, `src/Support/OpenSalesTaxClientFactory.php`
+**Pattern:** Validate-then-pin
+
+`UrlValidator::validateAndResolve()` returns the IP we resolved at validation time; `OpenSalesTaxClientFactory` pins `host:port` to that IP via Guzzle's `curl.options[CURLOPT_RESOLVE]`. A DNS responder that swaps the engine's IP between save and request can no longer redirect us to an internal address. Pinning is unconditional (applies whether or not "Allow private network engines" is on — the goal is rebinding defense, not network policy).
+
 ## Verified safe — areas reviewed with no findings
 
 | Path | Concern | Result |
@@ -128,7 +134,7 @@ The base URL validator rejects RFC1918 / loopback / link-local / CGNAT / multica
 
 ## Test surface
 
-The PHPUnit suite exercises **74 test cases / 153 assertions** covering:
+The PHPUnit suite exercises **106 test cases / 227 assertions** (v0.2.0) covering:
 
 - **URL validator (18 tests):** empty / malformed / non-http scheme / file scheme / ftp scheme / gopher scheme / loopback / RFC1918 ×3 / link-local / CGNAT / multicast / public / unresolvable / opt-in / multi-IP partial-public / literal-IP-without-DNS / scheme-rejected-even-with-opt-in
 - **Zip extractor (9 tests):** empty / clean / zip+4 / zip with space / surrounding whitespace / state prefix / non-US postcode / four digits / symbol noise
