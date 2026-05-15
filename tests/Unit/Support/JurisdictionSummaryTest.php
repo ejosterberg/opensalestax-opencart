@@ -174,4 +174,44 @@ final class JurisdictionSummaryTest extends TestCase
         $sum = array_sum(array_map(static fn (JurisdictionSummary $s): float => $s->taxAmount, $summaries));
         self::assertEqualsWithDelta(8.85, $sum, 0.001);
     }
+
+    /**
+     * Real-world fixture from the VM 919 live-engine integration test:
+     * MN state 6.875% + county/city/3 special-district lines for a
+     * $100 MN/55401 cart. Engine returns `tax_total=9.025`. Each
+     * jurisdiction's raw tax rounds individually to 2dp — but state
+     * 6.875 round-half-up to 6.88 injects +0.005 of phantom tax,
+     * making the naive sum 9.03 instead of 9.025. The absorber must
+     * push that drift onto the last bucket so the aggregate matches
+     * the engine's authoritative number.
+     */
+    public function testRoundHalfUpDriftIsAbsorbedAfterPerBucketRound(): void
+    {
+        $response = new CalculateResponse(
+            subtotal: '100.00',
+            taxTotal: '9.025', // engine authoritative — 3dp
+            lines: [
+                new CalculatedLine(
+                    amount: '100.00',
+                    category: 'general',
+                    tax: '9.025',
+                    ratePct: '9.025',
+                    jurisdictions: [
+                        new JurisdictionRate(name: 'Minnesota',           type: 'state',   ratePct: '6.875', tax: '6.875'),
+                        new JurisdictionRate(name: 'Hennepin County',     type: 'county',  ratePct: '0.15',  tax: '0.15'),
+                        new JurisdictionRate(name: 'Minneapolis',         type: 'city',    ratePct: '0.50',  tax: '0.50'),
+                        new JurisdictionRate(name: 'Transit District',    type: 'special', ratePct: '0.50',  tax: '0.50'),
+                        new JurisdictionRate(name: 'Housing District',    type: 'special', ratePct: '0.50',  tax: '0.50'),
+                        new JurisdictionRate(name: 'Stadium District',    type: 'special', ratePct: '0.50',  tax: '0.50'),
+                    ],
+                ),
+            ],
+            disclaimer: 'x',
+        );
+
+        $summaries = JurisdictionSummary::fromResponse($response);
+        self::assertCount(6, $summaries);
+        $sum = array_sum(array_map(static fn (JurisdictionSummary $s): float => $s->taxAmount, $summaries));
+        self::assertEqualsWithDelta(9.025, $sum, 0.001);
+    }
 }

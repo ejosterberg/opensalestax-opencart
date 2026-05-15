@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Pre-release identifiers (`-alpha.N`, `-rc.N`) signal that the listed version is not yet stable.
 
+## [0.2.1] - 2026-05-15
+
+### Fixed
+
+- **`JurisdictionSummary` post-round drift absorber.** The v0.2 absorber compared the engine's authoritative `tax_total` against the *unrounded* per-jurisdiction sum, then rounded each bucket. Per-bucket `round_half_up` on a `.x75` jurisdiction (e.g. MN state 6.875) injected +0.005 of phantom tax that the absorber never saw, leaving the visible per-jurisdiction sum off by 1¢ from the engine total in real-world MN cart flows. Drift is now computed against the rounded-bucket sum so the last bucket carries the residual and the displayed aggregate always ties exactly to the engine's `tax_total`. Surfaced by the VM 919 live-engine integration test ($100 MN/55401 cart, `tax_total=9.025` — naive code rendered 9.03).
+- Regression test added covering the 6-jurisdiction MN fixture; 107 tests / 229 assertions total (was 106 / 227).
+
 ## [0.2.0] - 2026-05-14
 
 ### Added

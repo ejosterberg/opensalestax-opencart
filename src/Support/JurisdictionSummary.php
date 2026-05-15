@@ -81,16 +81,25 @@ final readonly class JurisdictionSummary
             return [];
         }
 
-        // Absorb sub-cent rounding drift into the last summary so the
-        // emitted totals match the engine's `tax_total` exactly.
+        // Round each bucket to 2dp first; THEN compute drift against the rounded
+        // sum so the absorber sees the actual gap a shopper would notice (e.g.,
+        // engine returns 9.025, raw sum is 9.025, but 6.875 rounds to 6.88
+        // injecting +0.005 of phantom tax — that's what we absorb away).
         $bucketList = array_values($buckets);
+        foreach ($bucketList as &$b) {
+            $b['tax'] = round($b['tax'], 2);
+        }
+        unset($b);
+
         $sum = 0.0;
         foreach ($bucketList as $b) {
             $sum += $b['tax'];
         }
         $authoritative = (float) $response->taxTotal;
-        $drift = round($authoritative - $sum, 2);
-        if (abs($drift) >= 0.005) {
+        $drift = $authoritative - $sum;
+        // Use a half-cent threshold; the abs() guards against the floating-point
+        // noise that a true-zero drift would produce in PHP's IEEE-754 doubles.
+        if (abs($drift) >= 0.005 - PHP_FLOAT_EPSILON) {
             $bucketList[count($bucketList) - 1]['tax'] += $drift;
         }
 
@@ -104,7 +113,7 @@ final readonly class JurisdictionSummary
         );
 
         return array_map(
-            static fn (array $b): self => new self($b['name'], $b['type'], round($b['tax'], 2)),
+            static fn (array $b): self => new self($b['name'], $b['type'], $b['tax']),
             $bucketList,
         );
     }
