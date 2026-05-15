@@ -32,7 +32,10 @@ jobs:
           restore-keys: composer-${{ matrix.php }}-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction
+        # Use  not  so dep resolution adapts to whichever
+        # version of the SDK is the latest matching  on Packagist.
+        # Avoids stale-lockfile failures every time the SDK gets a patch.
+        run: composer update --prefer-dist --no-progress --no-interaction
 
       - name: PHPUnit
         run: vendor/bin/phpunit --coverage-clover=coverage.xml
