@@ -39,7 +39,7 @@ Source: README roadmap + Phase 01 plan "v0.2 candidates" + CHANGELOG "Known limi
 | 07 — Marketplace submission | Listing prep, screenshots, OC marketplace forms | README v0.1.x |
 | Live-storefront integration test | Orthogonal — can land alongside any phase | not gated |
 
-Live-storefront integration test against a real OpenCart 4.x install (`docs/INTEGRATION-CHECK.md`) is still pending across all phases. Until that's done, the connector's status is "unit-tested, not yet validated on a real cart."
+Live-storefront integration test against a real OpenCart 4.x install (`docs/INTEGRATION-CHECK.md`) landed 2026-05-15. v0.2.0 was deployed to **VM 919 / `opencart-test`** (OC 4.1.0.3, Debian 13, Apache 2, MariaDB 11.8.6, PHP 8.4.21) and exercised against engine v0.56.0. Six feature probes (bootstrap, cart-signature cache key, customer-group exemption, non-US gate, JurisdictionSummary, cache-hit short-circuit) all passed. One known minor surfaced: post-round drift in `JurisdictionSummary` when a per-jurisdiction tax hits a half-up boundary (e.g. `6.875 → 6.88`); 0.5¢ aggregate over engine. Tracked as a v0.2.1 follow-up.
 
 ## Non-negotiables (recap — see `constitution.md` for full text)
 
