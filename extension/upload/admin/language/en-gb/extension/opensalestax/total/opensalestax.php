@@ -22,6 +22,7 @@ $_['entry_tls_verify']                = 'Verify TLS certificate';
 $_['entry_allow_private_nets']        = 'Allow private network engines (advanced)';
 $_['entry_fail_hard']                 = 'Block checkout on engine error';
 $_['entry_cache_ttl_seconds']         = 'Cache TTL (seconds)';
+$_['entry_exempt_groups']             = 'Exempt customer groups';
 
 // Help
 $_['help_base_url']                   = 'Base URL of your self-hosted OpenSalesTax engine, e.g. https://ost.example.com';
@@ -29,6 +30,16 @@ $_['help_api_key']                    = 'Bearer token if your engine requires au
 $_['help_tls_verify']                 = 'Strongly recommended ON. Disable only for engines with self-signed certificates.';
 $_['help_allow_private_nets']         = 'Permit RFC1918 / loopback / link-local hosts. Required if your engine runs on the same LAN as OpenCart.';
 $_['help_fail_hard']                  = 'When ON, an unreachable engine blocks checkout. When OFF (default), OpenCart\'s built-in tax handles the cart and a warning is logged.';
+$_['help_exempt_groups']              = 'Comma-separated OpenCart customer-group IDs that bypass real-time tax calculation (e.g. wholesale, nonprofit). OpenCart\'s built-in tax flow handles them. Leave blank for no exemptions.';
+
+// Button
+$_['button_test_connection']          = 'Test Connection';
+
+// Text
+$_['text_testing']                    = 'Contacting the OpenSalesTax engine…';
+$_['text_test_ok']                    = 'Engine reachable.';
+$_['text_test_fail']                  = 'Could not reach the OpenSalesTax engine.';
 
 // Error
 $_['error_permission']                = 'Warning: You do not have permission to modify OpenSalesTax!';
+$_['error_test_no_url']               = 'Enter an engine base URL before testing the connection.';

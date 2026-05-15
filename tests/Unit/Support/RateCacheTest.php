@@ -15,9 +15,31 @@ use PHPUnit\Framework\TestCase;
 
 final class RateCacheTest extends TestCase
 {
-    public function testKeyShape(): void
+    public function testKeyShapeWithoutSignature(): void
     {
         self::assertSame('ost:rate:55401', RateCache::keyFor('55401'));
+        self::assertSame('ost:rate:55401', RateCache::keyFor('55401', null));
+        self::assertSame('ost:rate:55401', RateCache::keyFor('55401', ''));
+    }
+
+    public function testKeyShapeWithSignature(): void
+    {
+        self::assertSame('ost:rate:55401:abc123', RateCache::keyFor('55401', 'abc123'));
+    }
+
+    public function testDifferentSignaturesDoNotCrossCacheHit(): void
+    {
+        $store = new ArrayCache();
+        $cache = new RateCache($store, 60);
+
+        $a = $cache->remember('55401', fn (): CalculateResponse => $this->makeResponse('1.00'), 'sigA');
+        $b = $cache->remember('55401', fn (): CalculateResponse => $this->makeResponse('2.00'), 'sigB');
+
+        // Each signature got its own engine call + cache entry.
+        self::assertSame('1.00', $a->taxTotal);
+        self::assertSame('2.00', $b->taxTotal);
+        self::assertSame(2, $store->setCount);
+        self::assertCount(2, $store->store);
     }
 
     public function testMissTriggersResolverAndStoresPayload(): void
@@ -82,11 +104,11 @@ final class RateCacheTest extends TestCase
         self::assertSame('calc-only', $reloaded->disclaimer);
     }
 
-    private function makeResponse(): CalculateResponse
+    private function makeResponse(string $taxTotal = '8.83'): CalculateResponse
     {
         return new CalculateResponse(
             subtotal: '100.00',
-            taxTotal: '8.83',
+            taxTotal: $taxTotal,
             lines: [
                 new CalculatedLine(
                     amount: '100.00',

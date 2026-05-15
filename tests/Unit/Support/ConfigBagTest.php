@@ -68,6 +68,61 @@ final class ConfigBagTest extends TestCase
         self::assertSame('https://ost.example.com', $bag->baseUrl);
     }
 
+    public function testExemptCustomerGroupIdsDefaultsToEmpty(): void
+    {
+        self::assertSame([], ConfigBag::fromArray([])->exemptCustomerGroupIds);
+        self::assertSame([], ConfigBag::fromArray(['exempt_customer_group_ids' => ''])->exemptCustomerGroupIds);
+        self::assertSame([], ConfigBag::fromArray(['exempt_customer_group_ids' => null])->exemptCustomerGroupIds);
+    }
+
+    public function testExemptCustomerGroupIdsParsesCsv(): void
+    {
+        self::assertSame(
+            [2, 3, 7],
+            ConfigBag::fromArray(['exempt_customer_group_ids' => '2,3,7'])->exemptCustomerGroupIds,
+        );
+    }
+
+    public function testExemptCustomerGroupIdsTrimsAndDedupes(): void
+    {
+        self::assertSame(
+            [2, 3],
+            ConfigBag::fromArray(['exempt_customer_group_ids' => '  2 , 3 ,3 '])->exemptCustomerGroupIds,
+        );
+    }
+
+    public function testExemptCustomerGroupIdsSortsAscending(): void
+    {
+        self::assertSame(
+            [1, 2, 5, 9],
+            ConfigBag::fromArray(['exempt_customer_group_ids' => '9,2,5,1'])->exemptCustomerGroupIds,
+        );
+    }
+
+    public function testExemptCustomerGroupIdsAcceptsGuestZero(): void
+    {
+        self::assertSame(
+            [0],
+            ConfigBag::fromArray(['exempt_customer_group_ids' => '0'])->exemptCustomerGroupIds,
+        );
+    }
+
+    public function testExemptCustomerGroupIdsDropsNonNumericTokens(): void
+    {
+        self::assertSame(
+            [2, 7],
+            ConfigBag::fromArray(['exempt_customer_group_ids' => '2,abc,7, '])->exemptCustomerGroupIds,
+        );
+    }
+
+    public function testExemptCustomerGroupIdsAcceptsArrayInput(): void
+    {
+        self::assertSame(
+            [2, 3, 7],
+            ConfigBag::fromArray(['exempt_customer_group_ids' => [2, '3', 7]])->exemptCustomerGroupIds,
+        );
+    }
+
     public function testFullPopulatedShape(): void
     {
         $bag = ConfigBag::fromArray([

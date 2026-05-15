@@ -19,10 +19,13 @@ use OpenSalesTax\Responses\CalculateResponse;
  * is portable across cache drivers (OpenCart 4.x supports file, apc, memcache,
  * redis) and survives SDK refactors.
  *
- * Cache key shape: `ost:rate:{zip5}`. Default TTL is 24h, configurable via
- * the admin `cache_ttl_seconds` setting.
+ * Cache key shape:
+ *   - `ost:rate:{zip5}`           when no cart signature is supplied (legacy
+ *                                  v0.1 shape; still callable for tests and
+ *                                  for backwards-compat with stale entries).
+ *   - `ost:rate:{zip5}:{sig}`     when a signature is supplied (v0.1.1+).
  *
- * Cart-content signature is NOT in the key for v0.1 — see plan.md.
+ * Default TTL is 24h, configurable via the admin `cache_ttl_seconds` setting.
  */
 final class RateCache
 {
@@ -38,9 +41,9 @@ final class RateCache
      *
      * @param callable():CalculateResponse $resolver
      */
-    public function remember(string $zip5, callable $resolver): CalculateResponse
+    public function remember(string $zip5, callable $resolver, ?string $cartSignature = null): CalculateResponse
     {
-        $key = self::keyFor($zip5);
+        $key = self::keyFor($zip5, $cartSignature);
         $cached = $this->cache->get($key);
         if (is_array($cached)) {
             /** @var array<string, mixed> $cached */
@@ -53,11 +56,16 @@ final class RateCache
     }
 
     /**
-     * Compute the cache key for a destination ZIP-5.
+     * Compute the cache key for a destination ZIP-5 + optional cart signature.
+     *
+     * Null or empty signature → legacy v0.1 key shape, kept callable so the
+     * extension reads stale entries from a v0.1 install gracefully (they'll
+     * miss; TTL expiry takes care of cleanup).
      */
-    public static function keyFor(string $zip5): string
+    public static function keyFor(string $zip5, ?string $cartSignature = null): string
     {
-        return 'ost:rate:' . $zip5;
+        $base = 'ost:rate:' . $zip5;
+        return ($cartSignature === null || $cartSignature === '') ? $base : $base . ':' . $cartSignature;
     }
 
     /**

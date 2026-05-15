@@ -94,7 +94,10 @@ final class TaxCalculatorTest extends TestCase
         self::assertSame('8.83', $response->taxTotal);
         self::assertSame(1, $store->setCount);
         self::assertSame(1, $logger->countAtLevel('info'));
-        self::assertArrayHasKey('ost:rate:55401', $store->store);
+        // v0.1.1+: cache key includes the cart signature suffix.
+        $key = array_key_first($store->store);
+        self::assertNotNull($key);
+        self::assertMatchesRegularExpression('/^ost:rate:55401:[0-9a-f]{16}$/', $key);
     }
 
     public function testSecondCallHitsCacheWithoutEngineRoundTrip(): void
@@ -185,6 +188,103 @@ final class TaxCalculatorTest extends TestCase
 
         self::assertNull($calc->calculate([], self::SHIPPING_ADDRESS, 'USD'));
         self::assertSame(0, $mock->count());
+    }
+
+    public function testTwoCartsWithDifferentSignaturesBothHitEngine(): void
+    {
+        $logger = new ArrayLogger();
+        $store = new ArrayCache();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $this->activeConfig(),
+            mock: $mock,
+            logger: $logger,
+            cacheStore: $store,
+        );
+
+        // Same ZIP, different category mix — must not share a cache entry.
+        $cart1 = [['total' => 100.00]];
+        $cart2 = [['total' => 50.00], ['total' => 50.00]];
+
+        $r1 = $calc->calculate($cart1, self::SHIPPING_ADDRESS, 'USD');
+        $r2 = $calc->calculate($cart2, self::SHIPPING_ADDRESS, 'USD');
+
+        self::assertNotNull($r1);
+        self::assertNotNull($r2);
+        // Two distinct cache writes — no cross-cart cache hit.
+        self::assertSame(2, $store->setCount);
+        self::assertSame(2, $logger->countAtLevel('info'));
+        self::assertCount(2, $store->store);
+    }
+
+    public function testExemptCustomerGroupShortCircuitsBeforeEngineCall(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([]);  // any engine call would throw
+        $config = ConfigBag::fromArray([
+            'status'                     => true,
+            'base_url'                   => 'https://ost.example.com',
+            'allow_private_nets'         => true,
+            'exempt_customer_group_ids'  => '2,3',
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $config,
+            mock: $mock,
+            logger: $logger,
+        );
+
+        self::assertNull($calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD', customerGroupId: 2));
+        self::assertSame(0, $mock->count());
+        self::assertSame([], $logger->records);
+    }
+
+    public function testNonExemptCustomerGroupFlowsNormally(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+        ]);
+        $config = ConfigBag::fromArray([
+            'status'                     => true,
+            'base_url'                   => 'https://ost.example.com',
+            'allow_private_nets'         => true,
+            'exempt_customer_group_ids'  => '2,3',
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $config,
+            mock: $mock,
+            logger: $logger,
+        );
+
+        $response = $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD', customerGroupId: 1);
+        self::assertNotNull($response);
+    }
+
+    public function testNullCustomerGroupBypassesExemptionGate(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+        ]);
+        $config = ConfigBag::fromArray([
+            'status'                     => true,
+            'base_url'                   => 'https://ost.example.com',
+            'allow_private_nets'         => true,
+            'exempt_customer_group_ids'  => '0,2',  // includes 0 (guests)
+        ]);
+        $calc = $this->buildCalculatorWithMock(
+            config: $config,
+            mock: $mock,
+            logger: $logger,
+        );
+
+        // Null ID is the "unknown / guest fallback" path — exemption-list logic
+        // requires a concrete ID to match, so we proceed to compute.
+        $response = $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD', customerGroupId: null);
+        self::assertNotNull($response);
     }
 
     public function testEngineMalformedJsonFailsSoftByDefault(): void

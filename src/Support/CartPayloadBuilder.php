@@ -40,7 +40,11 @@ final class CartPayloadBuilder
      * @param array<int, array<string, mixed>> $products
      * @param array<string, mixed> $shippingAddress
      *
-     * @return array{0: Address, 1: LineItem[]}|null
+     * @return array{0: Address, 1: LineItem[], 2: string}|null Tuple of
+     *     [Address, LineItem[], cartSignature]. The signature is a stable
+     *     16-hex-char prefix of SHA-256 over the sorted `(category, amount)`
+     *     tuples — used by `RateCache` to keep mixed-category carts at the
+     *     same ZIP from colliding on a stale cached response.
      */
     public function build(array $products, array $shippingAddress, string $currency): ?array
     {
@@ -56,18 +60,42 @@ final class CartPayloadBuilder
     }
 
     /**
+     * Compute the cart signature for an arbitrary line-item list.
+     *
+     * Deterministic: same `(category, amount)` set → same digest, regardless
+     * of order. Different categories OR different amounts → different digest.
+     *
+     * 16 hex chars (8 bytes) is enough collision resistance for a per-ZIP
+     * cache: a merchant would need millions of distinct cart shapes per ZIP
+     * inside the same TTL window before the birthday-paradox risk approaches
+     * 1%. Shorter prefix keeps OpenCart cache backends (file, apcu, memcache)
+     * happy.
+     *
+     * @param LineItem[] $lineItems
+     */
+    public static function signatureFor(array $lineItems): string
+    {
+        $tuples = [];
+        foreach ($lineItems as $item) {
+            $tuples[] = $item->category . ':' . $item->amount;
+        }
+        sort($tuples);
+        return substr(hash('sha256', implode('|', $tuples)), 0, 16);
+    }
+
+    /**
      * Build the SDK Address and pair it with the prepared line items.
      * Returns null on any SDK validation rejection (unreachable in practice
      * — the ZipExtractor already guarantees `^\d{5}$` — but the SDK throws
      * a typed exception we catch to keep the boundary clean).
      *
      * @param LineItem[] $lineItems
-     * @return array{0: Address, 1: LineItem[]}|null
+     * @return array{0: Address, 1: LineItem[], 2: string}|null
      */
     private function safeAddressTuple(string $zip5, array $lineItems): ?array
     {
         try {
-            return [new Address($zip5), $lineItems];
+            return [new Address($zip5), $lineItems, self::signatureFor($lineItems)];
         } catch (OpenSalesTaxValidationException) {
             return null;
         }

@@ -42,19 +42,28 @@ final class TaxCalculator
      * @param array<int, array<string, mixed>> $products       OpenCart cart product array
      * @param array<string, mixed>             $shippingAddress OpenCart shipping_address shape
      * @param string                            $currency        Cart currency code
+     * @param int|null                          $customerGroupId OpenCart customer-group ID of the logged-in
+     *                                                           customer (or null when unknown / guest fallback).
+     *                                                           When the bag's exempt list contains this ID, we
+     *                                                           return null before touching the engine.
      */
-    public function calculate(array $products, array $shippingAddress, string $currency): ?CalculateResponse
-    {
-        $prepared = $this->prepare($products, $shippingAddress, $currency);
+    public function calculate(
+        array $products,
+        array $shippingAddress,
+        string $currency,
+        ?int $customerGroupId = null,
+    ): ?CalculateResponse {
+        $prepared = $this->prepare($products, $shippingAddress, $currency, $customerGroupId);
         if ($prepared === null) {
             return null;
         }
-        [$client, $address, $lineItems] = $prepared;
+        [$client, $address, $lineItems, $signature] = $prepared;
 
         try {
             return $this->cache->remember(
                 $address->zip5,
                 fn (): CalculateResponse => $this->callEngine($client, $address->zip5, $lineItems),
+                $signature,
             );
         } catch (Throwable $e) {
             return $this->handleEngineError($e, $address->zip5);
@@ -63,16 +72,24 @@ final class TaxCalculator
 
     /**
      * Run the inert / gate / client-factory chain. Returns `[client, address,
-     * lineItems]` when the pipeline is ready to call the engine, or null when
-     * any prerequisite fails (extension off, gate-rejected, URL rejected).
+     * lineItems, signature]` when the pipeline is ready to call the engine,
+     * or null when any prerequisite fails (extension off, gate-rejected,
+     * URL rejected, exempt customer group).
      *
      * @param array<int, array<string, mixed>> $products
      * @param array<string, mixed>             $shippingAddress
-     * @return array{0: Client, 1: \OpenSalesTax\Address, 2: \OpenSalesTax\LineItem[]}|null
+     * @return array{0: Client, 1: \OpenSalesTax\Address, 2: \OpenSalesTax\LineItem[], 3: string}|null
      */
-    private function prepare(array $products, array $shippingAddress, string $currency): ?array
-    {
+    private function prepare(
+        array $products,
+        array $shippingAddress,
+        string $currency,
+        ?int $customerGroupId,
+    ): ?array {
         if (!$this->config->isActive()) {
+            return null;
+        }
+        if ($customerGroupId !== null && in_array($customerGroupId, $this->config->exemptCustomerGroupIds, true)) {
             return null;
         }
         $payload = $this->payloadBuilder->build($products, $shippingAddress, $currency);
@@ -80,8 +97,8 @@ final class TaxCalculator
         if ($payload === null || $client === null) {
             return null;
         }
-        [$address, $lineItems] = $payload;
-        return [$client, $address, $lineItems];
+        [$address, $lineItems, $signature] = $payload;
+        return [$client, $address, $lineItems, $signature];
     }
 
     /**

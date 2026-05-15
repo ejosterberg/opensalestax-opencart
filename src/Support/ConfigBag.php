@@ -19,6 +19,12 @@ namespace OpenSalesTax\OpenCart\Support;
  */
 final readonly class ConfigBag
 {
+    /**
+     * @param int[] $exemptCustomerGroupIds Sorted unique customer-group IDs that
+     *     should bypass real-time tax calculation (OpenCart's built-in tax
+     *     flow handles them instead — typically used for B2B / wholesale /
+     *     nonprofit groups already configured under OpenCart's tax classes).
+     */
     public function __construct(
         public bool $enabled,
         public string $baseUrl,
@@ -28,6 +34,7 @@ final readonly class ConfigBag
         public bool $allowPrivateNets,
         public bool $failHard,
         public int $cacheTtlSeconds,
+        public array $exemptCustomerGroupIds = [],
     ) {
     }
 
@@ -50,6 +57,7 @@ final readonly class ConfigBag
             allowPrivateNets: self::boolish($settings, 'allow_private_nets', false),
             failHard: self::boolish($settings, 'fail_hard', false),
             cacheTtlSeconds: self::intish($settings, 'cache_ttl_seconds', 86400),
+            exemptCustomerGroupIds: self::intList($settings, 'exempt_customer_group_ids'),
         );
     }
 
@@ -103,5 +111,52 @@ final readonly class ConfigBag
             return (int) $raw;
         }
         return $default;
+    }
+
+    /**
+     * Parse a comma-separated string of integer IDs into a deduped, sorted
+     * `int[]`. Accepts string `"2, 3, 7"` (merchant-typed input from the
+     * admin form), array `[2, 3, 7]` (programmatic injection in tests), or
+     * any value type — anything non-coercible drops out.
+     *
+     * `"0"` is a valid ID (OpenCart uses customer-group-id `0` for the
+     * default "guest" group), so the zero filter checks "is it a digit run?"
+     * rather than `!= 0`.
+     *
+     * @param array<string, mixed> $bag
+     * @return int[]
+     */
+    private static function intList(array $bag, string $key): array
+    {
+        $raw = $bag[$key] ?? null;
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+        if (is_array($raw)) {
+            $candidates = $raw;
+        } elseif (is_string($raw) || is_int($raw) || is_float($raw)) {
+            $candidates = explode(',', (string) $raw);
+        } else {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($candidates as $candidate) {
+            if (is_int($candidate)) {
+                $ids[] = $candidate;
+                continue;
+            }
+            if (!is_string($candidate) && !is_float($candidate)) {
+                continue;
+            }
+            $trimmed = trim(is_float($candidate) ? (string) $candidate : $candidate);
+            if ($trimmed === '' || preg_match('/^-?\d+$/', $trimmed) !== 1) {
+                continue;
+            }
+            $ids[] = (int) $trimmed;
+        }
+        $ids = array_values(array_unique($ids));
+        sort($ids);
+        return $ids;
     }
 }

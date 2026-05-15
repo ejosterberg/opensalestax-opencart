@@ -97,9 +97,64 @@
               <input type="number" id="input-cache-ttl" min="0" step="1" name="module_opensalestax_cache_ttl_seconds" value="{{ module_opensalestax_cache_ttl_seconds }}" class="form-control">
             </div>
           </div>
+
+          <div class="row mb-3">
+            <label for="input-exempt-groups" class="col-sm-3 col-form-label">{{ entry_exempt_groups }}</label>
+            <div class="col-sm-9">
+              <input type="text" id="input-exempt-groups" name="module_opensalestax_exempt_customer_group_ids" value="{{ module_opensalestax_exempt_customer_group_ids }}" placeholder="2,3" class="form-control">
+              <small class="form-text">{{ help_exempt_groups }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-3"></div>
+            <div class="col-sm-9">
+              <button type="button" id="button-opensalestax-test" class="btn btn-secondary"><i class="fa-solid fa-plug"></i> {{ button_test_connection }}</button>
+              <div id="opensalestax-test-result" class="mt-2"></div>
+            </div>
+          </div>
         </form>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  var button = document.getElementById('button-opensalestax-test');
+  if (!button) {
+    return;
+  }
+  button.addEventListener('click', function () {
+    var form = document.getElementById('form-opensalestax');
+    var panel = document.getElementById('opensalestax-test-result');
+    if (!form || !panel) {
+      return;
+    }
+    panel.innerHTML = '<div class="alert alert-info">{{ text_testing }}</div>';
+
+    var body = new FormData(form);
+
+    fetch({{ test_connection|json_encode|raw }}, {
+      method: 'POST',
+      body: body,
+      credentials: 'same-origin',
+      headers: {'Accept': 'application/json'}
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var ok = data && data.ok === true;
+      var msg = data && data.message ? data.message : (ok ? '{{ text_test_ok }}' : '{{ text_test_fail }}');
+      var version = data && data.version ? ' (v' + data.version + ')' : '';
+      panel.innerHTML = '<div class="alert alert-' + (ok ? 'success' : 'danger') + '">' +
+        (ok ? '<i class="fa-solid fa-check"></i> ' : '<i class="fa-solid fa-triangle-exclamation"></i> ') +
+        String(msg).replace(/[<>]/g, '') + version + '</div>';
+    })
+    .catch(function (err) {
+      panel.innerHTML = '<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> ' +
+        String(err && err.message ? err.message : err).replace(/[<>]/g, '') + '</div>';
+    });
+  });
+})();
+</script>
 {{ footer }}

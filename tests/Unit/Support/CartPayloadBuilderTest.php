@@ -27,11 +27,12 @@ final class CartPayloadBuilderTest extends TestCase
         );
 
         self::assertNotNull($result);
-        [$address, $lineItems] = $result;
+        [$address, $lineItems, $signature] = $result;
         self::assertSame('55401', $address->zip5);
         self::assertCount(1, $lineItems);
         self::assertSame('100.00', $lineItems[0]->amount);
         self::assertSame('general', $lineItems[0]->category);
+        self::assertMatchesRegularExpression('/^[0-9a-f]{16}$/', $signature);
     }
 
     public function testMultipleLinesMaintainOrder(): void
@@ -185,5 +186,77 @@ final class CartPayloadBuilderTest extends TestCase
             shippingAddress: ['iso_code_2' => 42, 'postcode' => '55401'],
             currency: 'USD',
         ));
+    }
+
+    public function testCartSignatureIsDeterministicForSameLines(): void
+    {
+        $r1 = $this->builder->build(
+            products: [['total' => 100.00], ['total' => 25.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+        $r2 = $this->builder->build(
+            products: [['total' => 100.00], ['total' => 25.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+
+        self::assertNotNull($r1);
+        self::assertNotNull($r2);
+        self::assertSame($r1[2], $r2[2]);
+    }
+
+    public function testCartSignatureIsOrderIndependent(): void
+    {
+        $r1 = $this->builder->build(
+            products: [['total' => 50.00], ['total' => 25.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+        $r2 = $this->builder->build(
+            products: [['total' => 25.00], ['total' => 50.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+
+        self::assertNotNull($r1);
+        self::assertNotNull($r2);
+        self::assertSame($r1[2], $r2[2]);
+    }
+
+    public function testCartSignatureDiffersOnDifferentAmounts(): void
+    {
+        $r1 = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+        $r2 = $this->builder->build(
+            products: [['total' => 100.01]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+
+        self::assertNotNull($r1);
+        self::assertNotNull($r2);
+        self::assertNotSame($r1[2], $r2[2]);
+    }
+
+    public function testCartSignatureDiffersOnDifferentLineCount(): void
+    {
+        $r1 = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+        $r2 = $this->builder->build(
+            products: [['total' => 50.00], ['total' => 50.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+
+        self::assertNotNull($r1);
+        self::assertNotNull($r2);
+        self::assertNotSame($r1[2], $r2[2]);
     }
 }

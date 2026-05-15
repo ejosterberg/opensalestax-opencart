@@ -64,12 +64,13 @@ class Opensalestax extends \Opencart\System\Engine\Model
             return null;
         }
 
-        $products = $this->cart->getProducts();
-        $shipping = $this->extractShippingAddress();
-        $currency = $this->extractCurrencyCode();
+        $products      = $this->cart->getProducts();
+        $shipping      = $this->extractShippingAddress();
+        $currency      = $this->extractCurrencyCode();
+        $customerGroup = $this->extractCustomerGroupId();
 
         try {
-            return $calculator->calculate($products, $shipping, $currency);
+            return $calculator->calculate($products, $shipping, $currency, $customerGroup);
         } catch (OpenCartOpenSalesTaxException $e) {
             // Fail-hard mode bubbles out so OpenCart can surface a real error.
             throw $e;
@@ -110,6 +111,24 @@ class Opensalestax extends \Opencart\System\Engine\Model
             $currency = (string) $this->currency->getCode();
         }
         return $currency;
+    }
+
+    /**
+     * Best-effort read of the logged-in customer's group ID. Returns null when
+     * the contract drifts (no `getGroupId()` method) or when reading throws.
+     * The calculator interprets null as "no exemption check" and proceeds.
+     */
+    private function extractCustomerGroupId(): ?int
+    {
+        try {
+            if (!isset($this->customer) || !method_exists($this->customer, 'getGroupId')) {
+                return null;
+            }
+            $value = $this->customer->getGroupId();
+            return is_numeric($value) ? (int) $value : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
