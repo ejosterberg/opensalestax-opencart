@@ -1,6 +1,6 @@
 # Current state — opensalestax-opencart
 
-> Snapshot updated 2026-05-14. Refresh after each phase ships.
+> Snapshot updated 2026-05-15. Refresh after each phase ships.
 
 ## Shipped
 
@@ -9,6 +9,7 @@
 | 01 — Bootstrap + tax extension + SSRF defense | v0.1.0-alpha.1 | 2026-05-13 | First public tag. Installable .ocmod.zip; unit tests green; SonarQube 0/0/0/0; live-storefront integration test pending. |
 | 02 — Operational polish | v0.1.1 | 2026-05-14 | Cart-signature cache key; customer-group exemptions; admin "Test Connection" button. 91 tests / 193 assertions; PHPStan max + PHP-CS-Fixer + composer audit clean. |
 | 03 — Surface + security | v0.2.0 | 2026-05-14 | Per-jurisdiction tax-line surface (opt-in); cURL IP-pinning closes the DNS-rebinding finding. 106 tests / 227 assertions; PHPStan max + PHP-CS-Fixer + composer audit clean. |
+| 03.1 — Drift-absorber fix | v0.2.1 | 2026-05-15 | `JurisdictionSummary` drift now computed against rounded-bucket sum (was raw-sum). Surfaced by VM 919 live-engine integration test ($100 MN/55401, `tax_total=9.025` — naive code rendered 9.03). 107 tests / 229 assertions. |
 
 ## Code shape (post-Phase 01)
 

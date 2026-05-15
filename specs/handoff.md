@@ -4,9 +4,9 @@
 
 ## Pick up here
 
-**v0.2.1 — JurisdictionSummary post-round drift fix.** Spawned-task chip exists ("Fix JurisdictionSummary post-round drift"). The fix is small: move the drift absorber to run *after* the per-bucket `round(_, 2)` pass instead of before. Add a regression test using the live-engine fixture: engine returns `tax_total=9.025` with state tax `6.875`; aggregate of rounded per-jurisdiction summaries should be 9.025, not 9.03. Ship as v0.2.1, refresh `.ocmod.zip`, cut release.
+**v0.2.1 shipped 2026-05-15** — JurisdictionSummary drift absorber now runs after the per-bucket round. Regression test covers the 9.025/6.875 MN fixture from the VM 919 integration check. Tag `v0.2.1`, GitHub release published.
 
-**After v0.2.1, check in with Eric** before any larger phase. Available phases:
+**Check in with Eric before any larger phase.** Available phases:
 
 - **Phase 04 (OC 3.x backport)** — entirely separate extension model (OCMOD/vqmod). Effectively a parallel codebase living in `extension-oc3/` with its own build script and a shared `src/Support/` library. Multi-day work.
 - **Phase 05 (Shipping-tax integration)** — needs engine-side support for shipping cost as a line item (verify SDK + engine support first; may block on upstream).
