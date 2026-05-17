@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -11,7 +11,7 @@ namespace OpenSalesTax\OpenCart\Support;
  *
  * Mirrors a subset of PSR-16 (get / set / delete) so the testable units don't
  * need PSR-16 itself. OpenCart 4.x ships its own `\Cache` class with `get` /
- * `set` / `delete` — the extension glue provides an adapter that forwards
+ * `set` / `delete` â€” the extension glue provides an adapter that forwards
  * verbatim.
  *
  * Tests substitute an in-memory implementation.

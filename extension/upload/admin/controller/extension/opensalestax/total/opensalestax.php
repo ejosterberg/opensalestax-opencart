@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -14,7 +14,7 @@ namespace Opencart\Admin\Controller\Extension\Opensalestax\Total;
  *  - `save()` validates and persists the form values
  *
  * The page lives under
- * `Admin → Extensions → Extensions → Order Totals → OpenSalesTax`.
+ * `Admin â†’ Extensions â†’ Extensions â†’ Order Totals â†’ OpenSalesTax`.
  *
  * Server-side validation:
  *  - The engine base URL is run through our `UrlValidator` so SSRF defenses
@@ -128,7 +128,7 @@ class Opensalestax extends \Opencart\System\Engine\Controller
     {
         // The bootstrap file pulls in our bundled autoloader so the validator
         // class can be referenced here at save-validation time.
-        require_once DIR_EXTENSION . 'opensalestax/system/library/opensalestax/bootstrap.php'; // NOSONAR — bundled autoload entry
+        require_once DIR_EXTENSION . 'opensalestax/system/library/opensalestax/bootstrap.php'; // NOSONAR â€” bundled autoload entry
         try {
             $validator = new \OpenSalesTax\OpenCart\Support\UrlValidator($allowPrivate);
             $validator->validate($baseUrl);
@@ -145,7 +145,7 @@ class Opensalestax extends \Opencart\System\Engine\Controller
      * calls the SDK's `health()` to confirm reachability + auth.
      *
      * Responds with `{ok: bool, message: string, version?: string}` JSON.
-     * Never blocks save — this is a diagnostic-only round trip and the
+     * Never blocks save â€” this is a diagnostic-only round trip and the
      * merchant chooses to invoke it.
      *
      * ACL-gated to the same `modify` permission as `save()`: a user who
@@ -198,7 +198,7 @@ class Opensalestax extends \Opencart\System\Engine\Controller
         bool $allowPriv,
         float $timeoutSec,
     ): array {
-        require_once DIR_EXTENSION . 'opensalestax/system/library/opensalestax/bootstrap.php'; // NOSONAR — bundled autoload entry
+        require_once DIR_EXTENSION . 'opensalestax/system/library/opensalestax/bootstrap.php'; // NOSONAR â€” bundled autoload entry
 
         try {
             (new \OpenSalesTax\OpenCart\Support\UrlValidator($allowPriv))->validate($baseUrl);

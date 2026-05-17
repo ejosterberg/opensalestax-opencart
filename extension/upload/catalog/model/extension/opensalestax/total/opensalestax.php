@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -20,7 +20,7 @@ use OpenSalesTax\Responses\CalculateResponse;
  * total.
  *
  * Gate failures (non-US / non-USD / disabled / engine error in fail-soft
- * mode) return without touching $taxes or $total — OpenCart's built-in
+ * mode) return without touching $taxes or $total â€” OpenCart's built-in
  * tax flow continues unchanged.
  */
 class Opensalestax extends \Opencart\System\Engine\Model
@@ -31,7 +31,7 @@ class Opensalestax extends \Opencart\System\Engine\Model
 
     /**
      * Language keys for per-jurisdiction line titles. Falls back to the
-     * engine-provided jurisdiction name when a key is missing — keeps unusual
+     * engine-provided jurisdiction name when a key is missing â€” keeps unusual
      * jurisdictions (the engine may add new types) renderable.
      */
     private const PER_JURISDICTION_TITLE_KEY = [
@@ -43,7 +43,7 @@ class Opensalestax extends \Opencart\System\Engine\Model
 
     /**
      * Code suffix per jurisdiction type. Combined with `opensalestax_` to form
-     * unique OpenCart total-line codes — required because the totals array is
+     * unique OpenCart total-line codes â€” required because the totals array is
      * keyed by `code` in checkout.
      */
     private const PER_JURISDICTION_CODE = [
@@ -112,7 +112,7 @@ class Opensalestax extends \Opencart\System\Engine\Model
     private function buildCalculatorSafely(): ?TaxCalculator
     {
         try {
-            require_once DIR_EXTENSION . 'opensalestax/system/library/opensalestax/bootstrap.php'; // NOSONAR — bundled bootstrap is the entry point
+            require_once DIR_EXTENSION . 'opensalestax/system/library/opensalestax/bootstrap.php'; // NOSONAR â€” bundled bootstrap is the entry point
             return \OpensalestaxBootstrap::build($this->registry);
         } catch (\Throwable $e) {
             $this->logFailSoft('opensalestax: build failed', $e);
@@ -237,7 +237,7 @@ class Opensalestax extends \Opencart\System\Engine\Model
                 return sprintf($pattern, $jurisdictionName);
             }
         } catch (\Throwable) {
-            // ignore — fall back to the jurisdiction name
+            // ignore â€” fall back to the jurisdiction name
         }
         return $jurisdictionName;
     }
@@ -252,7 +252,7 @@ class Opensalestax extends \Opencart\System\Engine\Model
                 $this->log->write($message . ' ' . $e->getMessage());
             }
         } catch (\Throwable) {
-            // intentionally silent — fail-soft means do not block checkout
+            // intentionally silent â€” fail-soft means do not block checkout
         }
     }
 }

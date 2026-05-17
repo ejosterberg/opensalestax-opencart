@@ -6,7 +6,7 @@ Thanks for considering a contribution to **opensalestax-opencart**.
 
 - **DCO sign-off required.** Every commit must be signed off with `git commit -s`. The Developer Certificate of Origin (DCO) is included by reference; see [`https://developercertificate.org/`](https://developercertificate.org/). The CI gate rejects unsigned commits.
 - **No AI co-author trailers.** Don't add `Co-authored-by: Claude` or similar to commit messages. Per the umbrella program's constitution, this project credits its human maintainer only.
-- **Apache 2.0 + SPDX header.** Every source file starts with `// SPDX-License-Identifier: Apache-2.0` (or the language equivalent — `# SPDX-License-Identifier: Apache-2.0` for shell scripts, `{# SPDX-License-Identifier: Apache-2.0 #}` for Twig).
+- **Dual-licensed Apache-2.0 OR GPL-2.0-or-later + SPDX header.** Every source file starts with `// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later` (or the language equivalent — `# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later` for shell scripts, `{# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later #}` for Twig).
 - **Calculation-only.** This extension does not file or remit tax. Pull requests adding filing / remittance / address-validation features will be closed without merge. See `specs/constitution.md` §4.
 - **HTTP API is the contract.** Never call OpenSalesTax engine internals — go through the `ejosterberg/opensalestax` SDK. If the SDK is missing a method you need, open an issue there first.
 

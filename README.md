@@ -126,6 +126,6 @@ Shipped:
 
 ## License
 
-Apache-2.0. See [`LICENSE`](LICENSE). DCO sign-off (`git commit -s`) required on every commit.
+Dual-licensed under your choice of [Apache-2.0](LICENSE-APACHE.txt) OR [GPL-2.0-or-later](LICENSE-GPL.txt). See [`LICENSE`](LICENSE). DCO sign-off (`git commit -s`) required on every commit.
 
-OpenCart core is GPL-3.0. Apache 2.0 is compatible with GPL-3.0 (per the FSF compatibility chart); this extension is delivered as a separate package that runs inside OpenCart's plugin contract.
+OpenCart core is GPL-3.0. Both Apache-2.0 and GPL-2.0-or-later are compatible with GPL-3.0 (per the FSF compatibility chart); this extension is delivered as a separate package that runs inside OpenCart's plugin contract.

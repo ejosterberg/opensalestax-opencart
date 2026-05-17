@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -17,9 +17,9 @@ declare(strict_types=1);
  *       php tools/smoke-test.php
  *
  * Exit codes:
- *   0 — engine returned non-zero tax for ZIP 55401 / $100
- *   1 — engine returned zero tax / connector yielded
- *   2 — engine error (network, HTTP, malformed JSON)
+ *   0 â€” engine returned non-zero tax for ZIP 55401 / $100
+ *   1 â€” engine returned zero tax / connector yielded
+ *   2 â€” engine error (network, HTTP, malformed JSON)
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';

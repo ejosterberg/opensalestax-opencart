@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -44,7 +44,7 @@ $_['title_special_tax']               = '%s District Tax';
 $_['button_test_connection']          = 'Test Connection';
 
 // Text
-$_['text_testing']                    = 'Contacting the OpenSalesTax engine…';
+$_['text_testing']                    = 'Contacting the OpenSalesTax engineâ€¦';
 $_['text_test_ok']                    = 'Engine reachable.';
 $_['text_test_fail']                  = 'Could not reach the OpenSalesTax engine.';
 

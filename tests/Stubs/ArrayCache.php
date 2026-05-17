@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -11,7 +11,7 @@ use OpenSalesTax\OpenCart\Support\CacheRepositoryInterface;
 /**
  * In-memory cache double for tests.
  *
- * Does not honor TTL (every set is effectively forever) — tests assert on
+ * Does not honor TTL (every set is effectively forever) â€” tests assert on
  * the TTL parameter via the `lastTtl` field if needed.
  */
 final class ArrayCache implements CacheRepositoryInterface

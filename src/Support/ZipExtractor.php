@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -16,7 +16,7 @@ namespace OpenSalesTax\OpenCart\Support;
  *   "55401 1234"
  *   " 55401 "
  *   "MN 55401"
- *   "" (empty — fall back to billing)
+ *   "" (empty â€” fall back to billing)
  *   "K1A 0B1" (Canadian, will be rejected by the gate's US check, but we
  *               want to bail gracefully if we ever see it here)
  *

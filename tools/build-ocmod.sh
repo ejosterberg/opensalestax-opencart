@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 #
 # Build the OpenCart-installable .ocmod.zip artifact for a tagged release.
 #
@@ -90,7 +90,7 @@ cp -R "$REPO_ROOT/src/." "$STAGING_DIR/upload/system/library/opensalestax/src/"
 # Bridge: tell the bundled autoloader where to find our own namespace.
 cat > "$STAGING_DIR/upload/system/library/opensalestax/autoload-bridge.php" <<'PHP'
 <?php
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 // Registers our connector's PSR-4 namespace with the bundled autoloader.
 spl_autoload_register(static function (string $class): void {
     $prefix = 'OpenSalesTax\\OpenCart\\';
@@ -128,7 +128,7 @@ if command -v zip >/dev/null 2>&1; then
         zip -qr "$ARTIFACT" .
     )
 else
-    # Fallback: PHP's ZipArchive — portable across Windows / macOS / Linux.
+    # Fallback: PHP's ZipArchive â€” portable across Windows / macOS / Linux.
     ZIP_PHP="$REPO_ROOT/build/zip-helper.php"
     cat > "$ZIP_PHP" <<'PHP_ZIP'
 <?php

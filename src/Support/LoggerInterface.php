@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -14,7 +14,7 @@ namespace OpenSalesTax\OpenCart\Support;
  * this interface and the extension glue provides an adapter that forwards to
  * OpenCart's logger with a level prefix.
  *
- * Only `warning` and `info` are used by the connector — the rare error case
+ * Only `warning` and `info` are used by the connector â€” the rare error case
  * (e.g., misconfigured at fail-hard) becomes a thrown exception, not a log.
  */
 interface LoggerInterface

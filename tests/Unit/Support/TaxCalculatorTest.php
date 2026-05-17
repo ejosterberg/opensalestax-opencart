@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -106,7 +106,7 @@ final class TaxCalculatorTest extends TestCase
         $store = new ArrayCache();
         $mock = new MockHandler([
             new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
-            // No second response queued — a second engine call would throw.
+            // No second response queued â€” a second engine call would throw.
         ]);
         $calc = $this->buildCalculatorWithMock(
             config: $this->activeConfig(),
@@ -205,7 +205,7 @@ final class TaxCalculatorTest extends TestCase
             cacheStore: $store,
         );
 
-        // Same ZIP, different category mix — must not share a cache entry.
+        // Same ZIP, different category mix â€” must not share a cache entry.
         $cart1 = [['total' => 100.00]];
         $cart2 = [['total' => 50.00], ['total' => 50.00]];
 
@@ -214,7 +214,7 @@ final class TaxCalculatorTest extends TestCase
 
         self::assertNotNull($r1);
         self::assertNotNull($r2);
-        // Two distinct cache writes — no cross-cart cache hit.
+        // Two distinct cache writes â€” no cross-cart cache hit.
         self::assertSame(2, $store->setCount);
         self::assertSame(2, $logger->countAtLevel('info'));
         self::assertCount(2, $store->store);
@@ -281,7 +281,7 @@ final class TaxCalculatorTest extends TestCase
             logger: $logger,
         );
 
-        // Null ID is the "unknown / guest fallback" path — exemption-list logic
+        // Null ID is the "unknown / guest fallback" path â€” exemption-list logic
         // requires a concrete ID to match, so we proceed to compute.
         $response = $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD', customerGroupId: null);
         self::assertNotNull($response);

@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -156,7 +156,7 @@ final class OpenSalesTaxClientFactoryTest extends TestCase
 
     public function testRejectedUrlIsCaughtAndWrappedAsWarning(): void
     {
-        // Force rejection via a resolver returning a private IP — exercises the
+        // Force rejection via a resolver returning a private IP â€” exercises the
         // catch + log path without needing to subclass UrlValidator.
         $logger = new ArrayLogger();
         $validator = new UrlValidator(

@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -16,21 +16,21 @@ declare(strict_types=1);
  *
  * IMPORTANT: This file is the ONLY entry point from OpenCart into our PHP
  * SDK. Anything that throws here (autoload failure, OpenCart contract drift)
- * is caught by the caller and degrades to fail-soft — see
+ * is caught by the caller and degrades to fail-soft â€” see
  * `catalog/model/extension/opensalestax/total/opensalestax.php`.
  *
  * The autoloads below are intentional: OpenCart core has no PSR-4 autoloader
  * accessible to extensions, so we wire up our bundled one here exactly once.
  * The SonarQube `php:S4833` "use namespace import" alternative does not apply
- * — there is no class loader registered with these classes before this file
+ * â€” there is no class loader registered with these classes before this file
  * runs.
  */
 
 // phpcs:disable PSR1.Files.SideEffects
 $ostaxLibBase = __DIR__;
-require_once $ostaxLibBase . '/vendor/autoload.php'; // NOSONAR — bundled autoloader is the entry point
-require_once $ostaxLibBase . '/OpenCartCacheAdapter.php'; // NOSONAR — adapter glue, no PSR-4 loader for it
-require_once $ostaxLibBase . '/OpenCartLoggerAdapter.php'; // NOSONAR — adapter glue, no PSR-4 loader for it
+require_once $ostaxLibBase . '/vendor/autoload.php'; // NOSONAR â€” bundled autoloader is the entry point
+require_once $ostaxLibBase . '/OpenCartCacheAdapter.php'; // NOSONAR â€” adapter glue, no PSR-4 loader for it
+require_once $ostaxLibBase . '/OpenCartLoggerAdapter.php'; // NOSONAR â€” adapter glue, no PSR-4 loader for it
 unset($ostaxLibBase);
 // phpcs:enable PSR1.Files.SideEffects
 

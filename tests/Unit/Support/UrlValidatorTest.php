@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -177,7 +177,7 @@ final class UrlValidatorTest extends TestCase
 
     public function testMultipleResolvedIpsAreAllChecked(): void
     {
-        // One public, one RFC1918 — should still reject.
+        // One public, one RFC1918 â€” should still reject.
         $validator = new UrlValidator(
             allowPrivateNets: false,
             hostResolver: static fn (string $host): array => ['8.8.8.8', '10.0.0.1'],
@@ -189,7 +189,7 @@ final class UrlValidatorTest extends TestCase
 
     public function testDefaultResolverHandlesLiteralIpWithoutDns(): void
     {
-        // No resolver injected — uses the default. Literal IP should short-circuit
+        // No resolver injected â€” uses the default. Literal IP should short-circuit
         // gethostbynamel and be rejected as private.
         $validator = new UrlValidator(allowPrivateNets: false);
 

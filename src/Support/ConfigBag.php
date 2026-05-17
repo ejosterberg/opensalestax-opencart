@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -10,7 +10,7 @@ namespace OpenSalesTax\OpenCart\Support;
  * Frozen DTO of the connector's admin-panel settings.
  *
  * Built once per request by the extension glue layer from OpenCart's
- * `setting` table (or a default array in tests). All access is read-only —
+ * `setting` table (or a default array in tests). All access is read-only â€”
  * the glue layer passes this around instead of letting consumers reach back
  * into OpenCart's config service.
  *
@@ -22,7 +22,7 @@ final readonly class ConfigBag
     /**
      * @param int[] $exemptCustomerGroupIds Sorted unique customer-group IDs that
      *     should bypass real-time tax calculation (OpenCart's built-in tax
-     *     flow handles them instead — typically used for B2B / wholesale /
+     *     flow handles them instead â€” typically used for B2B / wholesale /
      *     nonprofit groups already configured under OpenCart's tax classes).
      * @param bool  $perJurisdictionLines  When true, the catalog order-total
      *     model emits one totals row per jurisdiction (state / county / city
@@ -123,7 +123,7 @@ final readonly class ConfigBag
      * Parse a comma-separated string of integer IDs into a deduped, sorted
      * `int[]`. Accepts string `"2, 3, 7"` (merchant-typed input from the
      * admin form), array `[2, 3, 7]` (programmatic injection in tests), or
-     * any value type — anything non-coercible drops out.
+     * any value type â€” anything non-coercible drops out.
      *
      * `"0"` is a valid ID (OpenCart uses customer-group-id `0` for the
      * default "guest" group), so the zero filter checks "is it a digit run?"

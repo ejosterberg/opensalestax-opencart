@@ -2,7 +2,7 @@
     "name": "ejosterberg/opensalestax-opencart",
     "description": "OpenCart 4.x extension — destination-based US sales tax via the self-hosted OpenSalesTax engine",
     "type": "library",
-    "license": "Apache-2.0",
+    "license": ["Apache-2.0", "GPL-2.0-or-later"],
     "keywords": [
         "opencart",
         "opencart4",

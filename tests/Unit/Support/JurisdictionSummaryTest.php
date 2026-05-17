@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -135,7 +135,7 @@ final class JurisdictionSummaryTest extends TestCase
                     ratePct: '6.88',
                     jurisdictions: [
                         new JurisdictionRate(name: 'Minnesota State', type: 'state', ratePct: '6.88', tax: '6.88'),
-                        // Rate-only — no tax key, e.g. exemption rule:
+                        // Rate-only â€” no tax key, e.g. exemption rule:
                         new JurisdictionRate(name: 'Special Information', type: 'special', ratePct: '0.00', tax: null),
                     ],
                 ),
@@ -161,7 +161,7 @@ final class JurisdictionSummaryTest extends TestCase
                     ratePct: '8.85',
                     jurisdictions: [
                         new JurisdictionRate(name: 'Minnesota State', type: 'state', ratePct: '6.88', tax: '6.88'),
-                        // Per-jurisdiction sums to 8.83; engine total is 8.85 — drift of $0.02.
+                        // Per-jurisdiction sums to 8.83; engine total is 8.85 â€” drift of $0.02.
                         new JurisdictionRate(name: 'Hennepin County', type: 'county', ratePct: '1.95', tax: '1.95'),
                     ],
                 ),
@@ -179,7 +179,7 @@ final class JurisdictionSummaryTest extends TestCase
      * Real-world fixture from the VM 919 live-engine integration test:
      * MN state 6.875% + county/city/3 special-district lines for a
      * $100 MN/55401 cart. Engine returns `tax_total=9.025`. Each
-     * jurisdiction's raw tax rounds individually to 2dp — but state
+     * jurisdiction's raw tax rounds individually to 2dp â€” but state
      * 6.875 round-half-up to 6.88 injects +0.005 of phantom tax,
      * making the naive sum 9.03 instead of 9.025. The absorber must
      * push that drift onto the last bucket so the aggregate matches
@@ -189,7 +189,7 @@ final class JurisdictionSummaryTest extends TestCase
     {
         $response = new CalculateResponse(
             subtotal: '100.00',
-            taxTotal: '9.025', // engine authoritative — 3dp
+            taxTotal: '9.025', // engine authoritative â€” 3dp
             lines: [
                 new CalculatedLine(
                     amount: '100.00',

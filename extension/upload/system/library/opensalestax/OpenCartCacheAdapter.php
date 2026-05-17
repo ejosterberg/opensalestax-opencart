@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -13,7 +13,7 @@ use OpenSalesTax\OpenCart\Support\CacheRepositoryInterface;
  * value on hit). We normalize the miss to null so RateCache's `is_array`
  * branch can short-circuit cleanly.
  *
- * The TTL parameter is forwarded as the second argument to `Cache::set` —
+ * The TTL parameter is forwarded as the second argument to `Cache::set` â€”
  * OC's cache backends honor it where supported (file, apc, redis, memcache).
  */
 final class OpenCartCacheAdapter implements CacheRepositoryInterface

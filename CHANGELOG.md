@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Pre-release identifiers (`-alpha.N`, `-rc.N`) signal that the listed version is not yet stable.
 
+## [0.2.2] - 2026-05-17
+
+### Changed
+
+- **Dual-licensed Apache-2.0 OR GPL-2.0-or-later.** Adds GPL-2.0-or-later as
+  an alternative license alongside the existing Apache-2.0 grant, enabling
+  downstream redistribution in GPL-only ecosystems (OpenCart core is
+  GPL-3.0, OCA AGPL-track repositories, etc.) without giving up Apache
+  compatibility. License files reorganized: `LICENSE-APACHE.txt` (existing
+  Apache text, moved from `LICENSE`), `LICENSE-GPL.txt` (new, GNU GPL v2
+  text), `LICENSE` (new dual-declaration). SPDX headers updated across
+  source files. `composer.json` `license` field switched from string to
+  array form. Brings this connector in line with the rest of the
+  OpenSalesTax portfolio's dual-licensing standard.
+
+### Added
+
+- **`.github/dependabot.yml`** — weekly checks for composer + GitHub Actions
+  dependencies, with grouped dev-dep PRs. Brings this repo in line with
+  the rest of the OpenSalesTax connector portfolio's supply-chain hygiene
+  standard.
+
 ## [0.2.1] - 2026-05-15
 
 ### Fixed

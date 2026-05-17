@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -13,7 +13,7 @@ use OpenSalesTax\Responses\CalculateResponse;
  *
  * Built from the SDK's `CalculateResponse` by grouping `CalculatedLine.jurisdictions`
  * across every line and summing the per-line `tax` strings. The numeric value
- * is held as a float for arithmetic — re-formatted to 2dp by the caller when
+ * is held as a float for arithmetic â€” re-formatted to 2dp by the caller when
  * emitting to OpenCart's totals array.
  *
  * `type` mirrors the engine's jurisdiction-type vocabulary: `state`, `county`,
@@ -23,7 +23,7 @@ use OpenSalesTax\Responses\CalculateResponse;
 final readonly class JurisdictionSummary
 {
     /**
-     * Sort offsets for the standard US jurisdiction types — state first,
+     * Sort offsets for the standard US jurisdiction types â€” state first,
      * special last, matching typical tax-receipt ordering.
      */
     public const SORT_OFFSET = [
@@ -84,7 +84,7 @@ final readonly class JurisdictionSummary
         // Round each bucket to 2dp first; THEN compute drift against the rounded
         // sum so the absorber sees the actual gap a shopper would notice (e.g.,
         // engine returns 9.025, raw sum is 9.025, but 6.875 rounds to 6.88
-        // injecting +0.005 of phantom tax — that's what we absorb away).
+        // injecting +0.005 of phantom tax â€” that's what we absorb away).
         $bucketList = array_values($buckets);
         foreach ($bucketList as &$b) {
             $b['tax'] = round($b['tax'], 2);

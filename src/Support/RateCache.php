@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -58,7 +58,7 @@ final class RateCache
     /**
      * Compute the cache key for a destination ZIP-5 + optional cart signature.
      *
-     * Null or empty signature → legacy v0.1 key shape, kept callable so the
+     * Null or empty signature â†’ legacy v0.1 key shape, kept callable so the
      * extension reads stale entries from a v0.1 install gracefully (they'll
      * miss; TTL expiry takes care of cleanup).
      */

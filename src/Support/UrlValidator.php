@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -12,14 +12,14 @@ use InvalidArgumentException;
  * SSRF-defense URL validator for the OpenSalesTax engine base URL.
  *
  * Rules (in order):
- *  1. Empty input — reject.
- *  2. Parse failure or missing scheme/host — reject.
- *  3. Scheme must be `http` or `https` — reject otherwise.
+ *  1. Empty input â€” reject.
+ *  2. Parse failure or missing scheme/host â€” reject.
+ *  3. Scheme must be `http` or `https` â€” reject otherwise.
  *  4. When `allowPrivateNets` is FALSE (default), every resolved IP must be
- *     public — reject if any resolved address falls in:
+ *     public â€” reject if any resolved address falls in:
  *       - RFC1918    (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
  *       - loopback   (127.0.0.0/8, ::1)
- *       - link-local (169.254.0.0/16, fe80::/10) — including the AWS / GCP
+ *       - link-local (169.254.0.0/16, fe80::/10) â€” including the AWS / GCP
  *                    metadata endpoint at 169.254.169.254
  *       - CGNAT      (100.64.0.0/10, RFC 6598)
  *       - multicast  (224.0.0.0/4, ff00::/8)
@@ -74,7 +74,7 @@ class UrlValidator
      *
      * The returned IP is used by `OpenSalesTaxClientFactory` to pin the
      * runtime HTTP connection to a specific address via cURL's `RESOLVE`
-     * option — defeating DNS-rebinding attacks where a malicious responder
+     * option â€” defeating DNS-rebinding attacks where a malicious responder
      * returns a public IP at save time and a private/loopback IP at
      * request time.
      *
@@ -160,7 +160,7 @@ class UrlValidator
         if ($long === false) {
             return false;
         }
-        // 100.64.0.0/10 → 100.64.0.0 (0x64400000) .. 100.127.255.255 (0x647FFFFF)
+        // 100.64.0.0/10 â†’ 100.64.0.0 (0x64400000) .. 100.127.255.255 (0x647FFFFF)
         return $long >= 0x64400000 && $long <= 0x647FFFFF;
     }
 
@@ -173,7 +173,7 @@ class UrlValidator
         if ($long === false) {
             return false;
         }
-        // 224.0.0.0/4 → 224.0.0.0 (0xE0000000) .. 239.255.255.255 (0xEFFFFFFF)
+        // 224.0.0.0/4 â†’ 224.0.0.0 (0xE0000000) .. 239.255.255.255 (0xEFFFFFFF)
         return $long >= 0xE0000000 && $long <= 0xEFFFFFFF;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 declare(strict_types=1);
 
@@ -13,7 +13,7 @@ use OpenSalesTax\OpenCart\Support\LoggerInterface;
  * context as a `key=value` suffix so structured fields stay grep-able in
  * `system/storage/logs/error.log`.
  *
- * Customer addresses and full request payloads are NEVER logged — context
+ * Customer addresses and full request payloads are NEVER logged â€” context
  * keys at call sites are restricted to numeric metadata (status, RTT,
  * line_count, fail_hard) and the 5-digit ZIP.
  */
