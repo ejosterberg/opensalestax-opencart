@@ -93,9 +93,10 @@ class Opensalestax extends \Opencart\System\Engine\Model
         $shipping      = $this->extractShippingAddress();
         $currency      = $this->extractCurrencyCode();
         $customerGroup = $this->extractCustomerGroupId();
+        $shippingCost  = $this->extractShippingCost();
 
         try {
-            return $calculator->calculate($products, $shipping, $currency, $customerGroup);
+            return $calculator->calculate($products, $shipping, $currency, $customerGroup, $shippingCost);
         } catch (OpenCartOpenSalesTaxException $e) {
             // Fail-hard mode bubbles out so OpenCart can surface a real error.
             throw $e;
@@ -103,6 +104,29 @@ class Opensalestax extends \Opencart\System\Engine\Model
             $this->logFailSoft('opensalestax: calculate failed', $e);
             return null;
         }
+    }
+
+    /**
+     * Pull the chosen shipping method's pre-tax cost from the OpenCart
+     * checkout session. OpenCart's `total.shipping` order-total runs before
+     * us (sort_order < ours), so by the time we're called the merchant has
+     * picked a method and `$session->data['shipping_method']['cost']` is
+     * populated with the cart-currency amount.
+     *
+     * Returns null when no shipping method is selected (cart-level only
+     * carts, free shipping with no row, etc.).
+     */
+    private function extractShippingCost(): ?float
+    {
+        $method = $this->session->data['shipping_method'] ?? null;
+        if (!is_array($method)) {
+            return null;
+        }
+        $cost = $method['cost'] ?? null;
+        if (!is_numeric($cost)) {
+            return null;
+        }
+        return (float) $cost;
     }
 
     /**
@@ -166,7 +190,9 @@ class Opensalestax extends \Opencart\System\Engine\Model
         array &$totals,
         array &$total,
     ): void {
-        $taxAmount = (float) $response->taxTotal;
+        $itemTax     = (float) $response->taxTotal;
+        $shippingTax = $response->shipping !== null ? (float) $response->shipping->taxAmount : 0.0;
+        $taxAmount   = $itemTax + $shippingTax;
         if ($taxAmount <= 0.0) {
             return;
         }
@@ -179,6 +205,9 @@ class Opensalestax extends \Opencart\System\Engine\Model
             if ($summaries !== []) {
                 foreach ($summaries as $summary) {
                     $totals[] = $this->jurisdictionTotalRow($summary, $sortOrder);
+                }
+                if ($shippingTax > 0.0) {
+                    $totals[] = $this->shippingTaxRow($shippingTax, $sortOrder);
                 }
                 $total['total'] = (float) ($total['total'] ?? 0.0) + $taxAmount;
                 return;
@@ -200,6 +229,24 @@ class Opensalestax extends \Opencart\System\Engine\Model
         // conflict with merchant-defined tax classes; we surface our
         // computed tax as its own first-class total line(s) instead.
         $total['total'] = (float) ($total['total'] ?? 0.0) + $taxAmount;
+    }
+
+    /**
+     * Build a "Shipping Tax" total row. Used in per-jurisdiction mode where
+     * we want shipping tax surfaced as its own line so the merchant's
+     * accounting can break it out.
+     *
+     * @return array<string, mixed>
+     */
+    private function shippingTaxRow(float $shippingTax, int $baseSortOrder): array
+    {
+        return [
+            'extension'  => 'opensalestax',
+            'code'       => 'opensalestax_shipping',
+            'title'      => 'Shipping Tax',
+            'value'      => $shippingTax,
+            'sort_order' => $baseSortOrder + 8, // after special-district sort offset (which is 9 typically)
+        ];
     }
 
     /**

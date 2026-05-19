@@ -9,6 +9,7 @@ namespace OpenSalesTax\OpenCart\Support;
 use OpenSalesTax\Address;
 use OpenSalesTax\Exceptions\OpenSalesTaxValidationException;
 use OpenSalesTax\LineItem;
+use OpenSalesTax\Shipping;
 
 /**
  * Build SDK `Address` + `LineItem[]` from an OpenCart cart shape.
@@ -39,17 +40,27 @@ final class CartPayloadBuilder
     /**
      * @param array<int, array<string, mixed>> $products
      * @param array<string, mixed> $shippingAddress
+     * @param string $currency
+     * @param float|null $shippingCost Pre-tax shipping amount in cart currency,
+     *     typically `$session->data['shipping_method']['cost']` from the OpenCart
+     *     catalog session. When > 0, a `Shipping` value object is included in the
+     *     returned tuple so the engine applies first-class shipping-tax rules
+     *     (engine v0.59.0+). Null or zero → no shipping included.
      *
-     * @return array{0: Address, 1: LineItem[], 2: string, 3: string|null}|null Tuple of
-     *     [Address, LineItem[], cartSignature, stateCode]. The signature is a stable
+     * @return array{0: Address, 1: LineItem[], 2: string, 3: string|null, 4: Shipping|null}|null Tuple of
+     *     [Address, LineItem[], cartSignature, stateCode, shipping]. The signature is a stable
      *     16-hex-char prefix of SHA-256 over the sorted `(category, amount)`
      *     tuples — used by `RateCache` to keep mixed-category carts at the
      *     same ZIP from colliding on a stale cached response.
      *     The stateCode is the upper-case 2-letter US state code extracted from
      *     OpenCart's `zone_code` (CP-3 v0.3 nexus filter); null if unresolvable.
      */
-    public function build(array $products, array $shippingAddress, string $currency): ?array
-    {
+    public function build(
+        array $products,
+        array $shippingAddress,
+        string $currency,
+        ?float $shippingCost = null,
+    ): ?array {
         $zip5 = $this->extractEligibleZip($shippingAddress, $currency);
         if ($zip5 === null) {
             return null;
@@ -58,7 +69,29 @@ final class CartPayloadBuilder
         if ($lineItems === []) {
             return null;
         }
-        return $this->safeAddressTuple($zip5, $lineItems, self::extractState($shippingAddress));
+        $shipping = $this->buildShipping($shippingCost);
+        return $this->safeAddressTuple($zip5, $lineItems, self::extractState($shippingAddress), $shipping);
+    }
+
+    /**
+     * Construct a typed Shipping value-object from the raw cart shipping
+     * cost (PHP float in cart currency). Returns null when the cost is null,
+     * zero, or non-positive — engine treats absent shipping as "no shipping
+     * line", which is what we want when shipping is free or undefined.
+     */
+    private function buildShipping(?float $shippingCost): ?Shipping
+    {
+        if ($shippingCost === null || $shippingCost <= 0.0) {
+            return null;
+        }
+        try {
+            return new Shipping(
+                amount: number_format($shippingCost, 2, '.', ''),
+                separatelyStated: true,
+            );
+        } catch (OpenSalesTaxValidationException) {
+            return null;
+        }
     }
 
     /**
@@ -83,10 +116,13 @@ final class CartPayloadBuilder
     }
 
     /**
-     * Compute the cart signature for an arbitrary line-item list.
+     * Compute the cart signature for an arbitrary line-item list (+ optional shipping).
      *
      * Deterministic: same `(category, amount)` set → same digest, regardless
      * of order. Different categories OR different amounts → different digest.
+     * Shipping contributes a separate `ship:amount` token so a cart with
+     * a different shipping cost (or shipping vs. no-shipping) gets a fresh
+     * cache key.
      *
      * 16 hex chars (8 bytes) is enough collision resistance for a per-ZIP
      * cache: a merchant would need millions of distinct cart shapes per ZIP
@@ -96,29 +132,37 @@ final class CartPayloadBuilder
      *
      * @param LineItem[] $lineItems
      */
-    public static function signatureFor(array $lineItems): string
+    public static function signatureFor(array $lineItems, ?Shipping $shipping = null): string
     {
         $tuples = [];
         foreach ($lineItems as $item) {
             $tuples[] = $item->category . ':' . $item->amount;
         }
         sort($tuples);
+        if ($shipping !== null) {
+            $tuples[] = 'ship:' . $shipping->amount;
+        }
         return substr(hash('sha256', implode('|', $tuples)), 0, 16);
     }
 
     /**
-     * Build the SDK Address and pair it with the prepared line items.
+     * Build the SDK Address and pair it with the prepared line items + the
+     * optional Shipping value object.
      * Returns null on any SDK validation rejection (unreachable in practice
      * — the ZipExtractor already guarantees `^\d{5}$` — but the SDK throws
      * a typed exception we catch to keep the boundary clean).
      *
      * @param LineItem[] $lineItems
-     * @return array{0: Address, 1: LineItem[], 2: string, 3: string|null}|null
+     * @return array{0: Address, 1: LineItem[], 2: string, 3: string|null, 4: Shipping|null}|null
      */
-    private function safeAddressTuple(string $zip5, array $lineItems, ?string $stateCode): ?array
-    {
+    private function safeAddressTuple(
+        string $zip5,
+        array $lineItems,
+        ?string $stateCode,
+        ?Shipping $shipping,
+    ): ?array {
         try {
-            return [new Address($zip5), $lineItems, self::signatureFor($lineItems), $stateCode];
+            return [new Address($zip5), $lineItems, self::signatureFor($lineItems, $shipping), $stateCode, $shipping];
         } catch (OpenSalesTaxValidationException) {
             return null;
         }

@@ -9,6 +9,7 @@ namespace OpenSalesTax\OpenCart\Support;
 use OpenSalesTax\Client;
 use OpenSalesTax\OpenCart\Exceptions\OpenCartOpenSalesTaxException;
 use OpenSalesTax\Responses\CalculateResponse;
+use OpenSalesTax\Shipping;
 use Throwable;
 
 /**
@@ -56,18 +57,24 @@ final class TaxCalculator
      *                                                           customer (or null when unknown / guest fallback).
      *                                                           When the bag's exempt list contains this ID, we
      *                                                           return null before touching the engine.
+     * @param float|null                        $shippingCost   Optional pre-tax shipping cost
+     *                                                           (`$session->data['shipping_method']['cost']`).
+     *                                                           When > 0, sent to the engine as a first-class
+     *                                                           `shipping` field (engine v0.59.0+); the engine
+     *                                                           applies per-state shipping-taxability rules.
      */
     public function calculate(
         array $products,
         array $shippingAddress,
         string $currency,
         ?int $customerGroupId = null,
+        ?float $shippingCost = null,
     ): ?CalculateResponse {
-        $prepared = $this->prepare($products, $shippingAddress, $currency, $customerGroupId);
+        $prepared = $this->prepare($products, $shippingAddress, $currency, $customerGroupId, $shippingCost);
         if ($prepared === null) {
             return null;
         }
-        [$client, $address, $lineItems, $signature, $stateCode] = $prepared;
+        [$client, $address, $lineItems, $signature, $stateCode, $shipping] = $prepared;
 
         // Per-state nexus filter (CP-3, v0.3.0). When configured, short-circuit
         // the engine call for any cart shipping to a state outside the
@@ -83,7 +90,7 @@ final class TaxCalculator
         try {
             return $this->cache->remember(
                 $address->zip5,
-                fn (): CalculateResponse => $this->callEngine($client, $address->zip5, $lineItems),
+                fn (): CalculateResponse => $this->callEngine($client, $address->zip5, $lineItems, $shipping),
                 $signature,
             );
         } catch (Throwable $e) {
@@ -108,19 +115,20 @@ final class TaxCalculator
 
     /**
      * Run the inert / gate / client-factory chain. Returns `[client, address,
-     * lineItems, signature]` when the pipeline is ready to call the engine,
-     * or null when any prerequisite fails (extension off, gate-rejected,
-     * URL rejected, exempt customer group).
+     * lineItems, signature, stateCode, shipping]` when the pipeline is ready
+     * to call the engine, or null when any prerequisite fails (extension off,
+     * gate-rejected, URL rejected, exempt customer group).
      *
      * @param array<int, array<string, mixed>> $products
      * @param array<string, mixed>             $shippingAddress
-     * @return array{0: Client, 1: \OpenSalesTax\Address, 2: \OpenSalesTax\LineItem[], 3: string, 4: string|null}|null
+     * @return array{0: Client, 1: \OpenSalesTax\Address, 2: \OpenSalesTax\LineItem[], 3: string, 4: string|null, 5: Shipping|null}|null
      */
     private function prepare(
         array $products,
         array $shippingAddress,
         string $currency,
         ?int $customerGroupId,
+        ?float $shippingCost,
     ): ?array {
         if (!$this->config->isActive()) {
             return null;
@@ -128,30 +136,31 @@ final class TaxCalculator
         if ($customerGroupId !== null && in_array($customerGroupId, $this->config->exemptCustomerGroupIds, true)) {
             return null;
         }
-        $payload = $this->payloadBuilder->build($products, $shippingAddress, $currency);
+        $payload = $this->payloadBuilder->build($products, $shippingAddress, $currency, $shippingCost);
         $client  = $payload === null ? null : $this->clientFactory->make($this->config);
         if ($payload === null || $client === null) {
             return null;
         }
-        [$address, $lineItems, $signature, $stateCode] = $payload;
-        return [$client, $address, $lineItems, $signature, $stateCode];
+        [$address, $lineItems, $signature, $stateCode, $shipping] = $payload;
+        return [$client, $address, $lineItems, $signature, $stateCode, $shipping];
     }
 
     /**
      * @param \OpenSalesTax\LineItem[] $lineItems
      */
-    private function callEngine(Client $client, string $zip5, array $lineItems): CalculateResponse
+    private function callEngine(Client $client, string $zip5, array $lineItems, ?Shipping $shipping): CalculateResponse
     {
         $start = microtime(true);
         // SDK exceptions (network, API, validation) flow up unchanged. The
         // outer `calculate()` catches them via the Throwable handler and
         // applies the fail-soft / fail-hard policy in `handleEngineError()`.
-        $response = $client->calculate(new \OpenSalesTax\Address($zip5), $lineItems);
+        $response = $client->calculate(new \OpenSalesTax\Address($zip5), $lineItems, $shipping);
 
         $this->logger->info('opensalestax: engine /v1/calculate ok', [
             'zip5'       => $zip5,
             'rtt_ms'     => (int) round((microtime(true) - $start) * 1000),
             'line_count' => count($response->lines),
+            'shipping'   => $shipping !== null ? 1 : 0,
         ]);
         return $response;
     }

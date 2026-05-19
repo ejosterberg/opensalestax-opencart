@@ -298,4 +298,71 @@ final class CartPayloadBuilderTest extends TestCase
         self::assertNotNull($result);
         self::assertNull($result[3]);
     }
+
+    // CP-9 (v0.4.0): first-class shipping support — builder appends a typed
+    // Shipping value object as the 5th tuple element when shippingCost > 0.
+
+    public function testBuildOmitsShippingWhenCostNull(): void
+    {
+        $result = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+        self::assertNotNull($result);
+        self::assertNull($result[4]);
+    }
+
+    public function testBuildOmitsShippingWhenCostZero(): void
+    {
+        $result = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+            shippingCost: 0.0,
+        );
+        self::assertNotNull($result);
+        self::assertNull($result[4]);
+    }
+
+    public function testBuildIncludesShippingWhenCostPositive(): void
+    {
+        $result = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+            shippingCost: 12.50,
+        );
+        self::assertNotNull($result);
+        self::assertInstanceOf(\OpenSalesTax\Shipping::class, $result[4]);
+        self::assertSame('12.50', $result[4]->amount);
+        self::assertTrue($result[4]->separatelyStated);
+        self::assertFalse($result[4]->isHandlingCharge);
+    }
+
+    public function testSignatureChangesWhenShippingChanges(): void
+    {
+        $a = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+            shippingCost: 12.50,
+        );
+        $b = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+            shippingCost: 15.00,
+        );
+        $c = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+        self::assertNotNull($a);
+        self::assertNotNull($b);
+        self::assertNotNull($c);
+        self::assertNotSame($a[2], $b[2]);
+        self::assertNotSame($a[2], $c[2]);
+    }
 }

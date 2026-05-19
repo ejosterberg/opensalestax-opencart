@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Pre-release identifiers (`-alpha.N`, `-rc.N`) signal that the listed version is not yet stable.
 
+## [0.4.0] - 2026-05-19
+
+### Added
+
+- **CP-9 first-class shipping support.** The order-total entry point
+  now extracts the chosen shipping method's pre-tax cost from
+  `$session->data['shipping_method']['cost']` and sends it to the
+  OpenSalesTax engine as a top-level `shipping` field (engine v0.59.0+
+  via the `shipping_first_class` capability flag, exposed in
+  `ejosterberg/opensalestax` v0.3.0). The engine applies per-state
+  shipping-taxability rules internally — MN's "tax-if-items-taxable"
+  rule, MO/VA's "separately-stated" rule, MD's
+  shipping-vs-handling distinction, etc. — so the connector doesn't
+  need to know them. The engine's returned `shipping.tax_amount` is
+  added to the cart total and surfaced as a separate "Shipping Tax"
+  total row when the per-jurisdiction surface is enabled (otherwise
+  rolled into the aggregate "Sales Tax" line).
+- `Shipping` value object propagated through `CartPayloadBuilder`,
+  `TaxCalculator`, and `RateCache` (signature includes the shipping
+  amount so a cart with a different shipping cost gets a fresh cache
+  key). 4 new unit tests covering null / zero / positive shipping
+  cost handling and cache-key uniqueness.
+
+### Changed
+
+- **Bumps `ejosterberg/opensalestax` constraint from `^0.2.0` to
+  `^0.3.0`.** Picks up the new third arg on `Client::calculate(addr,
+  lines, shipping?)` plus the `CalculateResponse::$shipping` and
+  `$coverageWarning` response fields. Backward compatible — existing
+  calls without a shipping cost behave identically to v0.3.1. This
+  resolves the long-standing Phase 05 (shipping-tax integration)
+  block in the OpenCart spec roadmap.
+
+### Notes
+
+- Out-of-nexus orders get 0 shipping tax (same gate as item tax).
+- Carts with no chosen shipping method (free-shipping rows or
+  cart-only flows) skip the shipping segment entirely; the cart total
+  remains items-only.
+- Engine v0.59.0+ required for the engine to honor shipping. Older
+  engines silently ignore the field and the connector continues to
+  surface item tax only.
+
 ## [0.3.1] - 2026-05-19
 
 ### Changed

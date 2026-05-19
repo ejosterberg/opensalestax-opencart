@@ -99,11 +99,29 @@ final class RateCache
             }
             $lines[] = $lineArr;
         }
-        return [
+        $out = [
             'subtotal'   => $response->subtotal,
             'tax_total'  => $response->taxTotal,
             'lines'      => $lines,
             'disclaimer' => $response->disclaimer,
         ];
+        // v0.4.0 (CP-9): round-trip the engine's first-class shipping result
+        // through the cache. Older entries without the key deserialize as
+        // CalculatedShipping=null, which is the right behavior.
+        if ($response->shipping !== null) {
+            $shippingArr = [
+                'amount'     => $response->shipping->amount,
+                'tax_amount' => $response->shipping->taxAmount,
+                'rate_pct'   => $response->shipping->ratePct,
+            ];
+            if ($response->shipping->taxableReason !== null) {
+                $shippingArr['taxable_reason'] = $response->shipping->taxableReason;
+            }
+            $out['shipping'] = $shippingArr;
+        }
+        if ($response->coverageWarning !== null) {
+            $out['coverage_warning'] = $response->coverageWarning;
+        }
+        return $out;
     }
 }
