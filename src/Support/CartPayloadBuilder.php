@@ -40,11 +40,13 @@ final class CartPayloadBuilder
      * @param array<int, array<string, mixed>> $products
      * @param array<string, mixed> $shippingAddress
      *
-     * @return array{0: Address, 1: LineItem[], 2: string}|null Tuple of
-     *     [Address, LineItem[], cartSignature]. The signature is a stable
+     * @return array{0: Address, 1: LineItem[], 2: string, 3: string|null}|null Tuple of
+     *     [Address, LineItem[], cartSignature, stateCode]. The signature is a stable
      *     16-hex-char prefix of SHA-256 over the sorted `(category, amount)`
      *     tuples — used by `RateCache` to keep mixed-category carts at the
      *     same ZIP from colliding on a stale cached response.
+     *     The stateCode is the upper-case 2-letter US state code extracted from
+     *     OpenCart's `zone_code` (CP-3 v0.3 nexus filter); null if unresolvable.
      */
     public function build(array $products, array $shippingAddress, string $currency): ?array
     {
@@ -56,7 +58,28 @@ final class CartPayloadBuilder
         if ($lineItems === []) {
             return null;
         }
-        return $this->safeAddressTuple($zip5, $lineItems);
+        return $this->safeAddressTuple($zip5, $lineItems, self::extractState($shippingAddress));
+    }
+
+    /**
+     * Extract the US state 2-letter code from an OpenCart shipping_address
+     * array. OpenCart populates `zone_code` (e.g. "MN") at checkout time
+     * from the `oc_zone` table when the user picks a region. Returns null
+     * if the field is missing or not a 2-letter code.
+     *
+     * @param array<string, mixed> $shippingAddress
+     */
+    public static function extractState(array $shippingAddress): ?string
+    {
+        $raw = $shippingAddress['zone_code'] ?? $shippingAddress['zone'] ?? null;
+        if (!is_string($raw)) {
+            return null;
+        }
+        $upper = strtoupper(trim($raw));
+        if (preg_match('/^[A-Z]{2}$/', $upper) === 1) {
+            return $upper;
+        }
+        return null;
     }
 
     /**
@@ -90,12 +113,12 @@ final class CartPayloadBuilder
      * a typed exception we catch to keep the boundary clean).
      *
      * @param LineItem[] $lineItems
-     * @return array{0: Address, 1: LineItem[], 2: string}|null
+     * @return array{0: Address, 1: LineItem[], 2: string, 3: string|null}|null
      */
-    private function safeAddressTuple(string $zip5, array $lineItems): ?array
+    private function safeAddressTuple(string $zip5, array $lineItems, ?string $stateCode): ?array
     {
         try {
-            return [new Address($zip5), $lineItems, self::signatureFor($lineItems)];
+            return [new Address($zip5), $lineItems, self::signatureFor($lineItems), $stateCode];
         } catch (OpenSalesTaxValidationException) {
             return null;
         }

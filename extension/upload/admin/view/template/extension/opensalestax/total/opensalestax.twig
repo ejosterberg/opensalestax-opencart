@@ -118,6 +118,14 @@
           </div>
 
           <div class="row mb-3">
+            <label for="input-nexus-states" class="col-sm-3 col-form-label">{{ entry_nexus_states }}</label>
+            <div class="col-sm-9">
+              <input type="text" id="input-nexus-states" name="module_opensalestax_nexus_states" value="{{ module_opensalestax_nexus_states }}" placeholder="MN,WI,IA" class="form-control">
+              <small class="form-text">{{ help_nexus_states }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
             <div class="col-sm-3"></div>
             <div class="col-sm-9">
               <button type="button" id="button-opensalestax-test" class="btn btn-secondary"><i class="fa-solid fa-plug"></i> {{ button_test_connection }}</button>

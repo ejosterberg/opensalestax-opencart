@@ -158,4 +158,36 @@ final class ConfigBagTest extends TestCase
         self::assertSame(60, $bag->cacheTtlSeconds);
         self::assertTrue($bag->isActive());
     }
+
+    // --- CP-3 nexus_states parsing ------------------------------------------
+
+    public function testNexusStatesDefaultsToEmpty(): void
+    {
+        $bag = ConfigBag::fromArray([]);
+        self::assertSame([], $bag->nexusStates);
+    }
+
+    public function testNexusStatesParsesCommaSeparatedString(): void
+    {
+        $bag = ConfigBag::fromArray(['nexus_states' => 'MN,WI,IA']);
+        self::assertSame(['MN', 'WI', 'IA'], $bag->nexusStates);
+    }
+
+    public function testNexusStatesNormalizesLowercaseAndDuplicates(): void
+    {
+        $bag = ConfigBag::fromArray(['nexus_states' => 'mn, wi, MN, ia, wi']);
+        self::assertSame(['MN', 'WI', 'IA'], $bag->nexusStates);
+    }
+
+    public function testNexusStatesAcceptsArrayInput(): void
+    {
+        $bag = ConfigBag::fromArray(['nexus_states' => ['MN', 'WI', 'IA']]);
+        self::assertSame(['MN', 'WI', 'IA'], $bag->nexusStates);
+    }
+
+    public function testNexusStatesDropsMalformedTokens(): void
+    {
+        $bag = ConfigBag::fromArray(['nexus_states' => 'MN, Minnesota, 12, ,WI']);
+        self::assertSame(['MN', 'WI'], $bag->nexusStates);
+    }
 }

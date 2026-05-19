@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Pre-release identifiers (`-alpha.N`, `-rc.N`) signal that the listed version is not yet stable.
 
+## [0.3.0] - 2026-05-19
+
+### Added
+
+- **Per-state nexus filter (CP-3).** New `Nexus states` admin setting
+  (`module_opensalestax_nexus_states`) accepts a comma-separated list
+  of US 2-letter state codes (e.g. `MN,WI,IA`). When set and
+  non-empty, the order-total model short-circuits the engine call for
+  any cart whose `shipping_address.zone_code` is not in the list —
+  OpenCart's built-in tax (typically: no tax) takes over. Unset /
+  empty preserves v0.2 behavior (engine called for every US/USD
+  cart). Missing / unresolvable destination state with the filter
+  active is fail-closed (no engine call, no tax line) — the safer
+  default for a merchant who explicitly opted in.
+
+  Address parsing: OpenCart populates `zone_code` (e.g. "MN") on
+  `session->data['shipping_address']` at checkout time from the
+  `oc_zone` table when the user picks a state. We accept that 2-letter
+  code directly, normalized to upper case.
+
+  Wired through `ConfigBag` (parses the comma-string from
+  `oc_setting`), `CartPayloadBuilder::extractState` (pulls
+  `zone_code` from the shipping-address array, returns null on
+  miss), and a new `TaxCalculator::shouldSkipForNexus` gate that
+  fires before any cache or HTTP I/O.
+
+  Brings this connector in line with WooCommerce v0.5, Vendure v1.2,
+  and Odoo v0.3, which already shipped this filter. Major win for
+  merchants with limited nexus footprints — typical merchant only
+  has 1–3 nexus states and was previously paying engine RTT on
+  every cart.
+
 ## [0.2.2] - 2026-05-17
 
 ### Changed

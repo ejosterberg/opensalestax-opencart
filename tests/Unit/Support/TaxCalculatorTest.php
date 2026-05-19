@@ -287,6 +287,117 @@ final class TaxCalculatorTest extends TestCase
         self::assertNotNull($response);
     }
 
+    // --- CP-3 per-state nexus filter (v0.3.0) -------------------------------
+
+    public function testNexusFilterEmptyAllowlistPreservesPreV03Behavior(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+        ]);
+        $config = ConfigBag::fromArray([
+            'status'             => true,
+            'base_url'           => 'https://ost.example.com',
+            'allow_private_nets' => true,
+            'nexus_states'       => '', // empty = filter disabled
+        ]);
+        $calc = $this->buildCalculatorWithMock(config: $config, mock: $mock, logger: $logger);
+
+        // Even without a zone_code, the call goes through (filter is off).
+        $response = $calc->calculate(self::PRODUCTS, self::SHIPPING_ADDRESS, 'USD');
+        self::assertNotNull($response);
+    }
+
+    public function testNexusFilterAllowsCartInListedState(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+        ]);
+        $config = ConfigBag::fromArray([
+            'status'             => true,
+            'base_url'           => 'https://ost.example.com',
+            'allow_private_nets' => true,
+            'nexus_states'       => 'MN,WI,IA',
+        ]);
+        $calc = $this->buildCalculatorWithMock(config: $config, mock: $mock, logger: $logger);
+
+        $response = $calc->calculate(
+            self::PRODUCTS,
+            ['iso_code_2' => 'US', 'postcode' => '55401', 'zone_code' => 'MN'],
+            'USD',
+        );
+        self::assertNotNull($response);
+    }
+
+    public function testNexusFilterShortCircuitsOutOfStateCart(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([]); // any engine call would throw
+        $config = ConfigBag::fromArray([
+            'status'             => true,
+            'base_url'           => 'https://ost.example.com',
+            'allow_private_nets' => true,
+            'nexus_states'       => 'MN,WI,IA',
+        ]);
+        $calc = $this->buildCalculatorWithMock(config: $config, mock: $mock, logger: $logger);
+
+        $response = $calc->calculate(
+            self::PRODUCTS,
+            ['iso_code_2' => 'US', 'postcode' => '94016', 'zone_code' => 'CA'],
+            'USD',
+        );
+        self::assertNull($response);
+        self::assertSame(0, $mock->count());
+        self::assertSame(1, $logger->countAtLevel('info'));
+    }
+
+    public function testNexusFilterFailsClosedOnUnresolvableState(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([]); // any engine call would throw
+        $config = ConfigBag::fromArray([
+            'status'             => true,
+            'base_url'           => 'https://ost.example.com',
+            'allow_private_nets' => true,
+            'nexus_states'       => 'MN,WI,IA',
+        ]);
+        $calc = $this->buildCalculatorWithMock(config: $config, mock: $mock, logger: $logger);
+
+        // No zone_code on the address: fail-closed when filter is active.
+        $response = $calc->calculate(
+            self::PRODUCTS,
+            ['iso_code_2' => 'US', 'postcode' => '55401'],
+            'USD',
+        );
+        self::assertNull($response);
+        self::assertSame(0, $mock->count());
+    }
+
+    public function testNexusFilterAcceptsLowerCaseInput(): void
+    {
+        $logger = new ArrayLogger();
+        $mock = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], $this->engineOk()),
+        ]);
+        $config = ConfigBag::fromArray([
+            'status'             => true,
+            'base_url'           => 'https://ost.example.com',
+            'allow_private_nets' => true,
+            'nexus_states'       => 'mn, wi, ia',
+        ]);
+        $calc = $this->buildCalculatorWithMock(config: $config, mock: $mock, logger: $logger);
+
+        $response = $calc->calculate(
+            self::PRODUCTS,
+            ['iso_code_2' => 'US', 'postcode' => '55401', 'zone_code' => 'mn'],
+            'USD',
+        );
+        self::assertNotNull($response);
+    }
+
+    // --- end CP-3 -----------------------------------------------------------
+
     public function testEngineMalformedJsonFailsSoftByDefault(): void
     {
         $logger = new ArrayLogger();

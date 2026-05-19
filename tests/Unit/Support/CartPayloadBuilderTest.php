@@ -259,4 +259,43 @@ final class CartPayloadBuilderTest extends TestCase
         self::assertNotNull($r2);
         self::assertNotSame($r1[2], $r2[2]);
     }
+
+    // --- CP-3 state extraction ---------------------------------------------
+
+    public function testExtractStateReturnsUpperCaseTwoLetterCode(): void
+    {
+        self::assertSame('MN', CartPayloadBuilder::extractState(['zone_code' => 'MN']));
+        self::assertSame('MN', CartPayloadBuilder::extractState(['zone_code' => 'mn']));
+        self::assertSame('CA', CartPayloadBuilder::extractState(['zone_code' => ' CA ']));
+    }
+
+    public function testExtractStateReturnsNullForMissingOrInvalid(): void
+    {
+        self::assertNull(CartPayloadBuilder::extractState([]));
+        self::assertNull(CartPayloadBuilder::extractState(['zone_code' => '']));
+        self::assertNull(CartPayloadBuilder::extractState(['zone_code' => 'Minnesota']));
+        self::assertNull(CartPayloadBuilder::extractState(['zone_code' => '12']));
+    }
+
+    public function testBuildReturnsStateAsFourthTupleElement(): void
+    {
+        $result = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401', 'zone_code' => 'MN'],
+            currency: 'USD',
+        );
+        self::assertNotNull($result);
+        self::assertSame('MN', $result[3]);
+    }
+
+    public function testBuildReturnsNullStateWhenZoneCodeMissing(): void
+    {
+        $result = $this->builder->build(
+            products: [['total' => 100.00]],
+            shippingAddress: ['iso_code_2' => 'US', 'postcode' => '55401'],
+            currency: 'USD',
+        );
+        self::assertNotNull($result);
+        self::assertNull($result[3]);
+    }
 }

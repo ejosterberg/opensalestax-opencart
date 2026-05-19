@@ -28,6 +28,12 @@ final readonly class ConfigBag
      *     model emits one totals row per jurisdiction (state / county / city
      *     / special) instead of one aggregate "Sales Tax" line. Default off
      *     so v0.1 installs see no change after upgrade.
+     * @param string[] $nexusStates Per-state nexus allowlist (CP-3, v0.3.0).
+     *     Uppercase 2-letter US state codes. Empty array = filter disabled
+     *     (engine called for every US/USD cart). Non-empty = engine only
+     *     called when destination state is in this set. Missing /
+     *     unresolvable destination state with the filter active is
+     *     fail-closed (no engine call).
      */
     public function __construct(
         public bool $enabled,
@@ -40,6 +46,7 @@ final readonly class ConfigBag
         public int $cacheTtlSeconds,
         public array $exemptCustomerGroupIds = [],
         public bool $perJurisdictionLines = false,
+        public array $nexusStates = [],
     ) {
     }
 
@@ -64,7 +71,42 @@ final readonly class ConfigBag
             cacheTtlSeconds: self::intish($settings, 'cache_ttl_seconds', 86400),
             exemptCustomerGroupIds: self::intList($settings, 'exempt_customer_group_ids'),
             perJurisdictionLines: self::boolish($settings, 'per_jurisdiction_lines', false),
+            nexusStates: self::stateList($settings, 'nexus_states'),
         );
+    }
+
+    /**
+     * Parse a comma- or whitespace-separated list of US state codes into a
+     * deduped uppercase array. Accepts arrays for programmatic injection.
+     * Drops anything that isn't a 2-letter US state code silently.
+     *
+     * @param array<string, mixed> $bag
+     * @return string[]
+     */
+    private static function stateList(array $bag, string $key): array
+    {
+        $raw = $bag[$key] ?? null;
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+        if (is_array($raw)) {
+            $candidates = $raw;
+        } elseif (is_string($raw)) {
+            $candidates = preg_split('/[\s,]+/', $raw) ?: [];
+        } else {
+            return [];
+        }
+        $out = [];
+        foreach ($candidates as $candidate) {
+            if (!is_string($candidate) && !is_int($candidate)) {
+                continue;
+            }
+            $upper = strtoupper(trim((string) $candidate));
+            if (preg_match('/^[A-Z]{2}$/', $upper) === 1 && !in_array($upper, $out, true)) {
+                $out[] = $upper;
+            }
+        }
+        return $out;
     }
 
     /**

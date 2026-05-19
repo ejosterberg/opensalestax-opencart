@@ -70,6 +70,7 @@ tools/build-ocmod.sh
 | Cache TTL (seconds) | 86400 | Per-ZIP cache lifetime. The cache key also includes a stable signature of the cart's `(category, amount)` tuples, so mixed-category carts at the same ZIP don't share cached results. |
 | Exempt customer groups | (empty) | Comma-separated OpenCart customer-group IDs (e.g. `2,3`) that bypass real-time tax calculation. Typical use: B2B / wholesale / nonprofit groups already mapped to OpenCart's tax classes. Leave blank for no exemptions. |
 | Show tax breakdown per jurisdiction | No | When ON, the cart shows a separate total line per jurisdiction (state / county / city / special) labeled like "Minnesota State Tax", "Hennepin County Tax". When OFF (default), a single aggregate "Sales Tax" line. |
+| Nexus states (comma-separated) | (empty) | **v0.3 (CP-3):** Comma-separated US 2-letter state codes (e.g. `MN,WI,IA`) the merchant has nexus in. When set, the engine is only called for carts shipping to these states; carts to any other state short-circuit to OpenCart's built-in tax tables (typically: no tax). Leave blank to call the engine for every US/USD cart (pre-v0.3 behavior). Missing or unresolvable destination state with the filter active is fail-closed. |
 
 Click **Test Connection** at the bottom of the settings form to verify your engine URL / API key / TLS settings without putting a cart together. The button calls your engine's `/v1/health` and reports `ok / engine version` (or the failure reason). The button is ACL-gated to the same `modify` permission as the save action.
 
