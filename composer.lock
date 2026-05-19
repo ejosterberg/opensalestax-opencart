@@ -4,25 +4,25 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "424469cb526687538cb152d7243e7986",
+    "content-hash": "2946bf8e4fe62067abb9a29e6420265e",
     "packages": [
         {
             "name": "ejosterberg/opensalestax",
-            "version": "v0.1.0",
+            "version": "v0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ejosterberg/opensalestax-php.git",
-                "reference": "f3232f2136299c770905e393c5aa3b59725a944c"
+                "reference": "f91cea3548c5f116df0007fe05bd86efb358788f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ejosterberg/opensalestax-php/zipball/f3232f2136299c770905e393c5aa3b59725a944c",
-                "reference": "f3232f2136299c770905e393c5aa3b59725a944c",
+                "url": "https://api.github.com/repos/ejosterberg/opensalestax-php/zipball/f91cea3548c5f116df0007fe05bd86efb358788f",
+                "reference": "f91cea3548c5f116df0007fe05bd86efb358788f",
                 "shasum": ""
             },
             "require": {
                 "guzzlehttp/guzzle": "^7.8",
-                "php": ">=8.1",
+                "php": ">=8.2",
                 "psr/http-client": "^1.0"
             },
             "require-dev": {
@@ -57,9 +57,9 @@
             ],
             "support": {
                 "issues": "https://github.com/ejosterberg/opensalestax-php/issues",
-                "source": "https://github.com/ejosterberg/opensalestax-php/tree/v0.1.0"
+                "source": "https://github.com/ejosterberg/opensalestax-php/tree/v0.2.0"
             },
-            "time": "2026-05-04T04:22:13+00:00"
+            "time": "2026-05-19T04:15:15+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
@@ -5000,7 +5000,7 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.1"
+        "php": ">=8.2"
     },
     "platform-dev": {},
     "plugin-api-version": "2.9.0"
